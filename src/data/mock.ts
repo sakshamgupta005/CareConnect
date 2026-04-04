@@ -13,7 +13,7 @@ export const faqs = [
   {
     question: "How is patient privacy handled?",
     answer:
-      "Data is protected using modern encryption and secure access controls aligned with healthcare best practices.",
+      "Data is protected using modern encryption and secure access controls aligned with healthcare privacy standards.",
   },
   {
     question: "Can we connect it with existing hospital systems?",
@@ -36,7 +36,7 @@ export const patientRecords = [
     priority: "High",
     time: "12 mins ago",
     insight:
-      "AI detected a possible medication side-effect concern and suggested follow-up.",
+      "Patient sent a chat message about medication timing and requested clarification.",
     avatar:
       "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
   },
@@ -46,7 +46,7 @@ export const patientRecords = [
     priority: "Stable",
     time: "2 hrs ago",
     insight:
-      "Routine post-op guidance delivered. No urgent intervention was needed.",
+      "Post-op chat conversation completed and patient questions were answered.",
     avatar:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
   },
@@ -56,14 +56,14 @@ export const researchProjects = [
   {
     id: "alpha",
     title: "Neurosurgery: Project Alpha",
-    update: "AI summarized 42 papers on neuroplasticity.",
+    update: "Team chat channel updated with latest project notes.",
     updatedAt: "4h ago",
     members: ["JV", "AI", "+2"],
   },
   {
     id: "cardiac",
     title: "Cardiac Care Pathways",
-    update: "Protocol update in progress with cardiology team.",
+    update: "Care team chat discussion is active for protocol updates.",
     updatedAt: "Yesterday",
     members: ["JV", "AM"],
   },
@@ -72,7 +72,7 @@ export const researchProjects = [
 export const chatResponses = {
   english: {
     normal:
-      "Your report suggests part of the heart muscle may not be getting enough blood flow.",
+      "Your report shows that part of the heart muscle may not be getting enough blood flow.",
     simple:
       "Think of it like a pipe blockage in the heart's blood supply that needs treatment.",
   },

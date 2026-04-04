@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes, forwardRef } from "react";
+import { motion } from "motion/react";
 import { cn } from "../../lib/utils";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,12 +22,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "h-11 px-5 text-base",
     };
 
+    const hoverByVariant = {
+      primary: { y: -1.5, scale: 1.01, boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)" },
+      secondary: { y: -1.5, scale: 1.01, boxShadow: "0 10px 24px rgba(0, 106, 97, 0.2)" },
+      outline: { y: -1.5, scale: 1.005 },
+      ghost: { y: -1, scale: 1.005 },
+    } as const;
+
     return (
-      <button
+      <motion.button
         ref={ref}
         type={type}
+        whileHover={hoverByVariant[variant]}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 360, damping: 22, mass: 0.8 }}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60",
           variants[variant],
           sizes[size],
           className,

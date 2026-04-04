@@ -11,8 +11,13 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply m-0 bg-surface text-primary font-sans antialiased;
+    background-image: radial-gradient(circle at 8% 0%, rgba(0, 106, 97, 0.08), transparent 42%);
   }
 
   h1,
@@ -33,10 +38,25 @@
   textarea {
     @apply text-sm;
   }
+
+  ::selection {
+    background: rgba(0, 106, 97, 0.18);
+  }
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white;
+    @apply rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-shadow duration-300;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

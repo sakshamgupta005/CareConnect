@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { Filter, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
@@ -8,20 +9,25 @@ export default function DoctorDashboard() {
   return (
     <div className="bg-slate-50 py-8 sm:py-10">
       <div className="mx-auto w-full max-w-6xl space-y-8 px-4 sm:px-6">
-        <header className="space-y-4">
+        <motion.header
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="space-y-4"
+        >
           <div>
             <h1 className="text-2xl font-bold text-primary sm:text-3xl">Doctor Dashboard</h1>
-            <p className="text-sm text-slate-600">A simpler view of patient updates and ongoing research.</p>
+            <p className="text-sm text-slate-600">A focused view of team communication and patient chat activity.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
+            <motion.div whileHover={{ y: -1 }} className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search patients"
                 className="w-64 rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-secondary focus:outline-none"
               />
-            </div>
+            </motion.div>
             <Button variant="outline">
               <Filter className="h-4 w-4" />
               Filter
@@ -30,16 +36,29 @@ export default function DoctorDashboard() {
               <Button>Open Workspace</Button>
             </Link>
           </div>
-        </header>
+        </motion.header>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-slate-900">Patient activity</h2>
           <div className="grid gap-3">
-            {patientRecords.map((record) => (
-              <article key={record.id} className="card p-4">
+            {patientRecords.map((record, index) => (
+              <motion.article
+                key={record.id}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.45 }}
+                transition={{ delay: index * 0.07, duration: 0.38 }}
+                whileHover={{ y: -2, scale: 1.005 }}
+                className="card p-4"
+              >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="flex items-start gap-3">
-                    <img src={record.avatar} alt={record.name} className="h-10 w-10 rounded-full object-cover" />
+                    <motion.img
+                      whileHover={{ scale: 1.08 }}
+                      src={record.avatar}
+                      alt={record.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{record.name}</p>
                       <p className="text-xs text-slate-500">{record.time}</p>
@@ -57,39 +76,64 @@ export default function DoctorDashboard() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-slate-600">{record.insight}</p>
-              </article>
+              </motion.article>
             ))}
           </div>
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="card p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Research projects</h2>
+          <motion.div
+            initial={{ opacity: 0, x: -16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.4 }}
+            className="card p-5"
+          >
+            <h2 className="text-lg font-semibold text-slate-900">Team chat channels</h2>
             <div className="mt-4 space-y-3">
-              {researchProjects.map((project) => (
-                <article key={project.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              {researchProjects.map((project, index) => (
+                <motion.article
+                  key={project.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.06 * index, duration: 0.3 }}
+                  whileHover={{ x: 4 }}
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900">{project.title}</p>
                     <span className="text-xs text-slate-500">{project.updatedAt}</span>
                   </div>
                   <p className="mt-1 text-sm text-slate-600">{project.update}</p>
-                </article>
+                </motion.article>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          <div className="card p-5">
-            <h2 className="text-lg font-semibold text-slate-900">AI synthesis status</h2>
+          <motion.div
+            initial={{ opacity: 0, x: 16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.4 }}
+            className="card relative overflow-hidden p-5"
+          >
+            <motion.div
+              animate={{ y: [0, 14, 0], opacity: [0.16, 0.26, 0.16] }}
+              transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+              className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-secondary/20 blur-3xl"
+            />
+            <h2 className="text-lg font-semibold text-slate-900">AI chat status</h2>
             <p className="mt-2 text-sm text-slate-600">
-              CareConnect AI is summarizing newly published material and preparing updates for your team.
+              CareConnect AI chat is online and ready for team communication.
             </p>
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-              Current queue: 14 papers in progress.
+              Active channels: Patient Support and Team Coordination.
             </div>
             <Link to="/doctor/collaboration" className="mt-4 inline-block">
-              <Button variant="secondary">View progress</Button>
+              <Button variant="secondary">Open chat workspace</Button>
             </Link>
-          </div>
+          </motion.div>
         </section>
       </div>
     </div>
