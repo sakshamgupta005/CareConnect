@@ -23,7 +23,9 @@ export default function DoctorDataPage() {
       const [loadedContacts, loadedReports] = await Promise.all([listContactSubmissions(), listReports()]);
       setContacts(loadedContacts);
       setReports(loadedReports);
-      setSelectedReportId((current) => current || loadedReports[0]?.id || "");
+      const preferredReportId =
+        loadedReports.find((report) => report.status === "analyzed")?.id ?? loadedReports[0]?.id ?? "";
+      setSelectedReportId((current) => current || preferredReportId);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load saved inputs.");
     } finally {
@@ -174,6 +176,17 @@ export default function DoctorDataPage() {
                   <p className="font-semibold text-slate-900">Uploaded file</p>
                   <p className="mt-1">{selectedReportDetails.report.fileName}</p>
                   <p className="mt-1">Type: {selectedReportDetails.report.fileType}</p>
+                  <p className="mt-1">Saved PDF path: {selectedReportDetails.report.filePath || "No PDF path saved"}</p>
+                  {selectedReportDetails.report.filePath ? (
+                    <a
+                      href={selectedReportDetails.report.filePath}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex font-medium text-secondary hover:underline"
+                    >
+                      Open uploaded PDF
+                    </a>
+                  ) : null}
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700">
                   <p className="font-semibold text-slate-900">Raw report text (preview)</p>

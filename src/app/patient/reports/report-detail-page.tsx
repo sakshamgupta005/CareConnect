@@ -4,6 +4,7 @@ import { ArrowLeft, CircleAlert, LoaderCircle, MessageCircle } from "lucide-reac
 import { Link, useParams } from "react-router-dom";
 import { ReportResultsView } from "../../../components/report-data";
 import { Button } from "../../../components/ui/Button";
+import { deriveReportFocus } from "../../../lib/reportFocus";
 import { getReportById, type ReportDetailsDto } from "../../../lib/reportApi";
 
 const SITE_URL = "https://CareConnect.com";
@@ -13,6 +14,7 @@ export default function PatientReportDetailsPage() {
   const [details, setDetails] = useState<ReportDetailsDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const reportFocus = deriveReportFocus(details);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,20 +54,29 @@ export default function PatientReportDetailsPage() {
       return "CareConnect patient support message.";
     }
 
-    const faqQuestions = details.faqs.slice(0, 3).map((faq, index) => `${index + 1}. ${faq.question}`);
+    const faqQuestions = reportFocus.conversationPrompts
+      .slice(0, 3)
+      .map((question, index) => `${index + 1}. ${question}`);
     const questionBlock =
       faqQuestions.length > 0
         ? faqQuestions.join("\n")
         : "1. Can you explain my report in simpler words?\n2. What should I discuss with my doctor?";
 
+    const keyNotes = reportFocus.quickFacts
+      .slice(0, 2)
+      .map((fact) => `- ${fact}`)
+      .join("\n");
+
     return `CareConnect Report Help
 Report: ${details.report.title}
-Summary: ${details.report.aiSummary || "Report uploaded and under review."}
+Current focus: ${reportFocus.label}
+What this report is showing:
+${keyNotes || "- Report analysis is still being reviewed."}
 Report link: ${SITE_URL}/patient/reports/${details.report.id}
 
 Please help me with:
 ${questionBlock}`;
-  }, [details]);
+  }, [details, reportFocus]);
 
   const whatsappReportLink = `https://wa.me/?text=${encodeURIComponent(whatsappReportMessage)}`;
 
@@ -146,7 +157,7 @@ ${questionBlock}`;
               </p>
               <h2 className="mt-2 text-lg font-semibold text-slate-900">Need help in simple language?</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Open WhatsApp with a prefilled message using this report summary and questions.
+                Open WhatsApp with a prefilled message using this report's analyzed focus, key notes, and follow-up questions.
               </p>
             </div>
             <a href={whatsappReportLink} target="_blank" rel="noreferrer">
@@ -157,7 +168,18 @@ ${questionBlock}`;
             </a>
           </div>
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">WhatsApp message preview</p>
+            <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+              {reportFocus.concernLabel}
+            </div>
+            <p className="mt-3 text-sm font-semibold text-slate-900">{reportFocus.label}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {reportFocus.tags.map((tag) => (
+                <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">WhatsApp message preview</p>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">{whatsappReportMessage}</p>
           </div>
         </section>

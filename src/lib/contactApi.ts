@@ -1,4 +1,5 @@
 import { validateContactSubmissionBody, type ContactSubmissionInput } from "./contactSubmission";
+import { loadAuthSession } from "./auth";
 
 type ContactSubmissionResponse = {
   id: string;
@@ -10,6 +11,17 @@ export type ContactSubmissionRecord = {
   name: string;
   email: string;
   phone: string | null;
+  role: string | null;
+  age: string | null;
+  gender: string | null;
+  bloodGroup: string | null;
+  reportTitle: string | null;
+  reportFileName: string | null;
+  reportFileType: string | null;
+  reportFilePath: string | null;
+  reportRawText: string | null;
+  linkedReportId: string | null;
+  linkedReportStatus: "uploaded" | "analyzed" | null;
   message: string;
   createdAt: string;
 };
@@ -59,7 +71,14 @@ export async function submitContactForm(input: ContactSubmissionInput): Promise<
 }
 
 export async function listContactSubmissions(): Promise<ContactSubmissionRecord[]> {
-  const response = await fetch("/api/contact");
+  const session = loadAuthSession();
+  const response = await fetch("/api/contact", {
+    headers: session
+      ? {
+          "x-careconnect-role": session.role,
+        }
+      : undefined,
+  });
   const raw = await response.text();
   let parsed: unknown = null;
   try {
@@ -83,6 +102,39 @@ export async function listContactSubmissions(): Promise<ContactSubmissionRecord[
   return parsed;
 }
 
+export async function deleteContactSubmission(submissionId: string): Promise<void> {
+  const id = typeof submissionId === "string" ? submissionId.trim() : "";
+  if (!id) {
+    throw new Error("Missing submission id.");
+  }
+
+  const session = loadAuthSession();
+  const response = await fetch(`/api/contact?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: session
+      ? {
+          "x-careconnect-role": session.role,
+        }
+      : undefined,
+  });
+
+  const raw = await response.text();
+  let parsed: unknown = null;
+  try {
+    parsed = raw ? JSON.parse(raw) : null;
+  } catch {
+    parsed = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      parsed && typeof parsed === "object" && "error" in parsed && typeof parsed.error === "string"
+        ? parsed.error
+        : "Could not delete contact submission.";
+    throw new Error(message);
+  }
+}
+
 function isContactSubmissionRecord(value: unknown): value is ContactSubmissionRecord {
   if (!value || typeof value !== "object") return false;
 
@@ -92,6 +144,17 @@ function isContactSubmissionRecord(value: unknown): value is ContactSubmissionRe
     typeof item.name === "string" &&
     typeof item.email === "string" &&
     (typeof item.phone === "string" || item.phone === null) &&
+    (typeof item.role === "string" || item.role === null) &&
+    (typeof item.age === "string" || item.age === null) &&
+    (typeof item.gender === "string" || item.gender === null) &&
+    (typeof item.bloodGroup === "string" || item.bloodGroup === null) &&
+    (typeof item.reportTitle === "string" || item.reportTitle === null) &&
+    (typeof item.reportFileName === "string" || item.reportFileName === null) &&
+    (typeof item.reportFileType === "string" || item.reportFileType === null) &&
+    (typeof item.reportFilePath === "string" || item.reportFilePath === null) &&
+    (typeof item.reportRawText === "string" || item.reportRawText === null) &&
+    (typeof item.linkedReportId === "string" || item.linkedReportId === null) &&
+    (item.linkedReportStatus === "uploaded" || item.linkedReportStatus === "analyzed" || item.linkedReportStatus === null) &&
     typeof item.message === "string" &&
     typeof item.createdAt === "string"
   );

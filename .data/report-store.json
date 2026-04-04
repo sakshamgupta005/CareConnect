@@ -1,0 +1,98 @@
+{
+  "reports": [
+    {
+      "id": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "title": "Fallback Diabetes Test",
+      "fileName": "fallback-diabetes.txt",
+      "fileType": "text/plain",
+      "filePath": null,
+      "rawText": "Patient report shows diabetes mellitus. Glucose 168 mg/dL. HbA1c high. Follow-up advised.",
+      "aiSummary": "Main findings detected: Hemoglobin, Glucose.\nStatus distribution from the extracted findings: 1 low, 0 normal, 1 high.\nThe report also mentions follow-up or repeat review.\nUse the detailed findings, FAQs, and next-step notes below to guide your discussion with your doctor.",
+      "status": "analyzed",
+      "createdAt": "2026-04-04T21:19:28.068Z",
+      "updatedAt": "2026-04-04T21:20:00.918Z"
+    },
+    {
+      "id": "982f4b53-d5e0-44eb-8dcb-526271f0957f",
+      "title": "Clinical Report",
+      "fileName": "manual-report.txt",
+      "fileType": "text/plain",
+      "filePath": null,
+      "rawText": "diabates \nblood group B+\nage 5",
+      "aiSummary": null,
+      "status": "uploaded",
+      "createdAt": "2026-04-04T21:30:09.244Z",
+      "updatedAt": "2026-04-04T21:30:09.244Z"
+    },
+    {
+      "id": "49207f8c-3f1e-4bee-9bf2-734c4ca1d4dd",
+      "title": "Clinical Report",
+      "fileName": "manual-report.txt",
+      "fileType": "text/plain",
+      "filePath": null,
+      "rawText": "whjbdb",
+      "aiSummary": null,
+      "status": "uploaded",
+      "createdAt": "2026-04-04T21:30:28.942Z",
+      "updatedAt": "2026-04-04T21:30:28.942Z"
+    },
+    {
+      "id": "7de7c114-6bdd-46a3-818e-9f54902a3034",
+      "title": "Clinical Report",
+      "fileName": "manual-report.txt",
+      "fileType": "text/plain",
+      "filePath": null,
+      "rawText": "wbdahmb",
+      "aiSummary": null,
+      "status": "uploaded",
+      "createdAt": "2026-04-04T21:30:37.879Z",
+      "updatedAt": "2026-04-04T21:30:37.879Z"
+    }
+  ],
+  "insights": [
+    {
+      "id": "0dc35fc8-bc88-4de7-8131-5fb658cc26b4",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "type": "blood",
+      "label": "Hemoglobin",
+      "value": "1 g/dL",
+      "status": "low"
+    },
+    {
+      "id": "9ba7fcce-fd92-48c4-ac6b-bf734980a6e6",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "type": "sugar",
+      "label": "Glucose",
+      "value": "168 mg/dL",
+      "status": "high"
+    }
+  ],
+  "faqs": [
+    {
+      "id": "6cffd373-76c5-442c-afe8-c78dccd33ea7",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "question": "What does low hemoglobin mean?",
+      "answer": "Hemoglobin is lower than the expected range and may indicate anemia or low oxygen-carrying capacity."
+    },
+    {
+      "id": "6f3efdb3-fa39-4a9b-a0d0-40d70afb400b",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "question": "What does high glucose mean?",
+      "answer": "Glucose is higher than the expected range and is above the usual fasting range."
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "86101204-66cb-4900-92ad-f11abb5fa344",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "category": "Nutrition",
+      "text": "Discuss iron-rich meal options and any required supplements with your doctor."
+    },
+    {
+      "id": "09930cef-f29f-4caa-98ff-9c2623721384",
+      "reportId": "96640475-f3e7-441f-bd2e-78eeace05542",
+      "category": "Follow-up",
+      "text": "Discuss blood sugar monitoring and repeat testing with your doctor."
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { fetchJsonWithApiFallback } from "./apiClient";
+
 const MAX_PDF_SIZE_BYTES = 12 * 1024 * 1024;
 
 export type UploadPdfResponse = {
@@ -22,21 +24,13 @@ export async function uploadPdfToServer(file: File): Promise<UploadPdfResponse> 
     dataBase64,
   };
 
-  const response = await fetch("/api/uploads/pdf", {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/uploads/pdf", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
-
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
 
   if (!response.ok) {
     const message =
@@ -71,17 +65,12 @@ export async function deleteUploadedPdfFromServer(filePath: string): Promise<voi
     throw new Error("Missing uploaded file path.");
   }
 
-  const response = await fetch(`/api/uploads/pdf?filePath=${encodeURIComponent(filePath)}`, {
-    method: "DELETE",
-  });
-
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
+  const { response, payload: parsed } = await fetchJsonWithApiFallback(
+    `/api/uploads/pdf?filePath=${encodeURIComponent(filePath)}`,
+    {
+      method: "DELETE",
+    },
+  );
 
   if (!response.ok) {
     const message =

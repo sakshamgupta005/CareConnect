@@ -97,6 +97,24 @@ const KEYWORD_INSIGHTS: Array<{
   insight: HealthInsight;
 }> = [
   {
+    keyword: /\bdiabet(?:es|ic)?\b|\bprediabet/i,
+    insight: {
+      type: "sugar",
+      label: "Diabetes Note",
+      value: "Mentioned in report",
+      status: "high",
+    },
+  },
+  {
+    keyword: /(high|elevated)\s+(glucose|blood sugar)|hyperglyc/i,
+    insight: {
+      type: "sugar",
+      label: "Glucose Note",
+      value: "Mentioned in report",
+      status: "high",
+    },
+  },
+  {
     keyword: /anemia/i,
     insight: {
       type: "blood",
@@ -216,8 +234,12 @@ function buildSummary(insights: HealthInsight[], text: string): string {
   const high = insights.filter((item) => item.status === "high").length;
   const normal = insights.filter((item) => item.status === "normal").length;
 
-  if (insights.length === 1 && insights[0].label === "Report Observation") {
-    return "The report text was saved successfully. Specific lab values were not clearly detected, so please review the full report with your doctor.";
+  if (hasOnlyReportObservation(insights)) {
+    return [
+      "The upload was processed, but structured values were not reliably extracted from the report text.",
+      "Use the original report or PDF to confirm the clinical impression, flagged values, and reference ranges.",
+      "If this was a scanned or blurry document, a cleaner upload or pasted text will usually produce better findings.",
+    ].join("\n");
   }
 
   const leadLabels = insights
@@ -228,23 +250,53 @@ function buildSummary(insights: HealthInsight[], text: string): string {
   const rangeSummary = `${low} low, ${normal} normal, ${high} high`;
 
   const mentionFollowUp = /follow[-\s]?up|repeat test|retest|consult/i.test(text)
-    ? " A follow-up note is also mentioned in the report."
-    : "";
+    ? "The report also mentions follow-up or repeat review."
+    : "Follow-up should still be discussed with your doctor based on symptoms and history.";
 
-  return `This report highlights ${leadLabels}. Overall status distribution is ${rangeSummary}.${mentionFollowUp}`.trim();
+  return [
+    `Main findings detected: ${leadLabels}.`,
+    `Status distribution from the extracted findings: ${rangeSummary}.`,
+    mentionFollowUp,
+    "Use the detailed findings, FAQs, and next-step notes below to guide your discussion with your doctor.",
+  ].join("\n");
 }
 
 function buildFaqs(insights: HealthInsight[]): HealthFaq[] {
+  if (hasOnlyReportObservation(insights)) {
+    return [
+      {
+        question: "Why were no specific values extracted from this report?",
+        answer:
+          "This file did not provide reliable structured measurements from the text alone. The original report should be checked for the impression, abnormal values, and reference ranges.",
+      },
+      {
+        question: "What should be reviewed next?",
+        answer:
+          "Confirm the main clinical impression, each flagged value, the reference range used, and whether repeat testing or a better-quality upload is needed.",
+      },
+    ];
+  }
+
   return insights.slice(0, 5).map((insight) => ({
-    question:
-      insight.status === "normal"
-        ? `Is my ${insight.label} value okay?`
-        : `What does ${insight.status} ${insight.label.toLowerCase()} mean?`,
+    question: buildInsightQuestion(insight),
     answer: buildInsightExplanation(insight),
   }));
 }
 
 function buildRecommendations(insights: HealthInsight[]): HealthRecommendation[] {
+  if (hasOnlyReportObservation(insights)) {
+    return [
+      {
+        category: "Report review",
+        text: "Review the original report or PDF to confirm the impression, abnormal values, and reference ranges before relying on the summary alone.",
+      },
+      {
+        category: "Follow-up",
+        text: "At follow-up, discuss the main clinical impression, whether any value was truly abnormal, and whether repeat testing or cleaner extraction is needed.",
+      },
+    ];
+  }
+
   const items: HealthRecommendation[] = [];
 
   for (const insight of insights) {
@@ -275,6 +327,11 @@ function buildRecommendations(insights: HealthInsight[]): HealthRecommendation[]
           category: "Lifestyle",
           text: "Review dietary fat intake and exercise goals with your care team.",
         });
+      } else if (label.includes("diabetes")) {
+        items.push({
+          category: "Follow-up",
+          text: "Discuss HbA1c testing, repeat glucose review, and diabetes-related follow-up with your doctor.",
+        });
       } else if (label.includes("glucose")) {
         items.push({
           category: "Follow-up",
@@ -297,6 +354,18 @@ function buildRecommendations(insights: HealthInsight[]): HealthRecommendation[]
   }
 
   return dedupeRecommendations(items).slice(0, 6);
+}
+
+function buildInsightQuestion(insight: HealthInsight): string {
+  if (insight.value === "Mentioned in report" || insight.label.toLowerCase().includes("note")) {
+    return `What does the ${insight.label.toLowerCase()} in my report mean?`;
+  }
+
+  if (insight.status === "normal") {
+    return `Is my ${insight.label} value okay?`;
+  }
+
+  return `What does ${insight.status} ${insight.label.toLowerCase()} mean?`;
 }
 
 function buildInsightExplanation(insight: HealthInsight): string {
@@ -338,5 +407,9 @@ function dedupeRecommendations(items: HealthRecommendation[]): HealthRecommendat
   }
 
   return deduped;
+}
+
+function hasOnlyReportObservation(insights: HealthInsight[]): boolean {
+  return insights.length === 1 && insights[0].label === "Report Observation";
 }
 

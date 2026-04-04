@@ -19,7 +19,7 @@ export function ThemeToggle({ mode, onToggle, compact = false, className }: Them
         rowText: "text-[10px]",
         icon: "h-3 w-3",
         knob: "h-7 w-7",
-        darkShift: "translate-x-[38px]",
+        darkShift: "translate-x-[20px]",
       }
     : {
         shell: "h-11 w-[70px]",
@@ -27,7 +27,7 @@ export function ThemeToggle({ mode, onToggle, compact = false, className }: Them
         rowText: "text-[11px]",
         icon: "h-3.5 w-3.5",
         knob: "h-8 w-8",
-        darkShift: "translate-x-[44px]",
+        darkShift: "translate-x-[26px]",
       };
 
   return (

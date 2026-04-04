@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, ClipboardList, Database, FileSearch, FileUp, Sparkles } from "lucide-react";
+import { ArrowRight, ClipboardList, Database, FileSearch, FileUp, Mail, Sparkles } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { FocusBars } from "../../components/report-data";
 import { Button } from "../../components/ui/Button";
+import { deriveReportFocus } from "../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
 type FocusSection = "upload" | "faq" | null;
@@ -104,9 +106,10 @@ export default function DoctorDashboard() {
     ];
   }, [previewDetails]);
 
-  const latestReportId = reports[0]?.id;
+  const latestReportId = reports.find((report) => report.status === "analyzed")?.id ?? reports[0]?.id;
   const latestDoctorRoute = latestReportId ? `/doctor/reports/${latestReportId}` : "/test-upload";
   const latestPatientRoute = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
+  const reportFocus = deriveReportFocus(previewDetails);
 
   return (
     <div className="bg-slate-50 py-10 sm:py-14">
@@ -119,14 +122,22 @@ export default function DoctorDashboard() {
         >
           <h1 className="text-2xl font-bold text-primary sm:text-3xl">Doctor Dashboard</h1>
           <p className="text-sm text-slate-600">
-            Upload reports, run analysis, and review generated patient guidance data.
+            {reportFocus.doctorDescription}
           </p>
-          <Link to="/doctor/data" className="inline-flex">
-            <Button size="sm" variant="outline">
-              <Database className="h-4 w-4" />
-              View Saved Inputs
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/doctor/data" className="inline-flex">
+              <Button size="sm" variant="outline">
+                <Database className="h-4 w-4" />
+                View Saved Inputs
+              </Button>
+            </Link>
+            <Link to="/doctor/submissions" className="inline-flex">
+              <Button size="sm" variant="outline">
+                <Mail className="h-4 w-4" />
+                View Contact Submissions
+              </Button>
+            </Link>
+          </div>
         </motion.header>
 
         <section className="grid gap-6 md:grid-cols-3">
@@ -201,9 +212,12 @@ export default function DoctorDashboard() {
             viewport={{ once: true }}
             className="card-doctor p-6 sm:p-8"
           >
+            <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+              {reportFocus.concernLabel}
+            </div>
             <h2 className="text-lg font-semibold text-slate-900">Insight Status Mix</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Compact status breakdown from the latest analyzed report.
+              {reportFocus.siteHeadline}
             </p>
             <div className="mt-5 space-y-3">
               {previewDetails && previewDetails.insights.length > 0 ? (
@@ -228,26 +242,32 @@ export default function DoctorDashboard() {
             </div>
           </motion.article>
 
-          <motion.article
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="card p-6 sm:p-8"
           >
-            <h2 className="text-lg font-semibold text-slate-900">Pipeline Overview</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Real-time counts from stored reports and generated clinical guidance output.
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <MetricBox label="Reports" value={`${reports.length}`} />
-              <MetricBox label="Analyzed" value={`${totals.analyzed}`} />
-              <MetricBox label="Insights" value={`${totals.insights}`} />
-              <MetricBox label="FAQs" value={`${totals.faqs}`} />
-              <MetricBox label="Recommendations" value={`${totals.recommendations}`} />
-              <MetricBox label="Status" value={error ? "Error" : isLoading ? "Loading" : "Ready"} />
+            <FocusBars
+              bars={reportFocus.bars}
+              title="Latest report graph"
+              subtitle="These bars refresh from the current analyzed report, not from generic site data."
+            />
+            <div className="mt-4 card p-6 sm:p-8">
+              <h2 className="text-lg font-semibold text-slate-900">Pipeline Overview</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Real-time counts from stored reports and generated clinical guidance output.
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <MetricBox label="Reports" value={`${reports.length}`} />
+                <MetricBox label="Analyzed" value={`${totals.analyzed}`} />
+                <MetricBox label="Insights" value={`${totals.insights}`} />
+                <MetricBox label="FAQs" value={`${totals.faqs}`} />
+                <MetricBox label="Recommendations" value={`${totals.recommendations}`} />
+                <MetricBox label="Status" value={error ? "Error" : isLoading ? "Loading" : "Ready"} />
+              </div>
             </div>
             {error ? <p className="mt-3 text-sm text-amber-700">{error}</p> : null}
-          </motion.article>
+          </motion.div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -310,6 +330,11 @@ export default function DoctorDashboard() {
             <p className="mt-2 text-sm text-slate-600">
               Continue from the latest report or upload a new one for fresh analysis.
             </p>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current report focus</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{reportFocus.label}</p>
+              <p className="mt-2 text-sm text-slate-600">{reportFocus.doctorDescription}</p>
+            </div>
             <div className="mt-4 flex flex-col gap-2">
               <Link to={latestDoctorRoute}>
                 <Button className="w-full">Open Latest Report</Button>

@@ -1,3 +1,5 @@
+import { fetchJsonWithApiFallback } from "./apiClient";
+
 export type ReportStatus = "uploaded" | "analyzed";
 
 export type ReportDto = {
@@ -5,6 +7,7 @@ export type ReportDto = {
   title: string;
   fileName: string;
   fileType: string;
+  filePath: string | null;
   rawText: string;
   aiSummary: string | null;
   status: ReportStatus;
@@ -54,17 +57,16 @@ export type UploadReportPayload = {
   title: string;
   fileName: string;
   fileType: string;
+  filePath?: string;
   rawText: string;
 };
 
 export async function uploadReport(payload: UploadReportPayload): Promise<ReportDto> {
-  const response = await fetch("/api/upload-report", {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/upload-report", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-
-  const parsed = await parseResponse(response);
   ensureHttpSuccess(response, parsed, "Could not save report.");
 
   if (!isReport(parsed)) {
@@ -75,13 +77,11 @@ export async function uploadReport(payload: UploadReportPayload): Promise<Report
 }
 
 export async function analyzeReport(reportId: string): Promise<ReportDetailsDto> {
-  const response = await fetch("/api/analyze-report", {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/analyze-report", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reportId }),
   });
-
-  const parsed = await parseResponse(response);
   ensureHttpSuccess(response, parsed, "Could not analyze report.");
 
   if (!isReportDetails(parsed)) {
@@ -92,8 +92,7 @@ export async function analyzeReport(reportId: string): Promise<ReportDetailsDto>
 }
 
 export async function getReportById(reportId: string): Promise<ReportDetailsDto> {
-  const response = await fetch(`/api/report/${encodeURIComponent(reportId)}`);
-  const parsed = await parseResponse(response);
+  const { response, payload: parsed } = await fetchJsonWithApiFallback(`/api/report/${encodeURIComponent(reportId)}`);
   ensureHttpSuccess(response, parsed, "Could not load report.");
 
   if (!isReportDetails(parsed)) {
@@ -104,8 +103,7 @@ export async function getReportById(reportId: string): Promise<ReportDetailsDto>
 }
 
 export async function listReports(): Promise<ReportListItemDto[]> {
-  const response = await fetch("/api/reports");
-  const parsed = await parseResponse(response);
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/reports");
   ensureHttpSuccess(response, parsed, "Could not load reports.");
 
   if (!Array.isArray(parsed) || !parsed.every(isReportListItem)) {
@@ -113,19 +111,6 @@ export async function listReports(): Promise<ReportListItemDto[]> {
   }
 
   return parsed;
-}
-
-async function parseResponse(response: Response): Promise<unknown> {
-  const raw = await response.text();
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
 
 function ensureHttpSuccess(response: Response, payload: unknown, fallback: string): void {
@@ -153,6 +138,7 @@ function isReport(value: unknown): value is ReportDto {
     typeof item.title === "string" &&
     typeof item.fileName === "string" &&
     typeof item.fileType === "string" &&
+    (typeof item.filePath === "string" || item.filePath === null) &&
     typeof item.rawText === "string" &&
     (typeof item.aiSummary === "string" || item.aiSummary === null) &&
     (item.status === "uploaded" || item.status === "analyzed") &&
@@ -222,4 +208,3 @@ function isReportListItem(value: unknown): value is ReportListItemDto {
     typeof item.counts.recommendations === "number"
   );
 }
-

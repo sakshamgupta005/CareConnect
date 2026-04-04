@@ -2,7 +2,9 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FocusBars } from "../components/report-data";
 import { Button } from "../components/ui/Button";
+import { deriveReportFocus } from "../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../lib/reportApi";
 import { cn } from "../lib/utils";
 
@@ -24,8 +26,10 @@ export default function LandingPage() {
 
         setReports(loadedReports);
 
-        if (loadedReports.length > 0) {
-          const details = await getReportById(loadedReports[0].id);
+        const previewId = loadedReports.find((report) => report.status === "analyzed")?.id ?? loadedReports[0]?.id;
+
+        if (previewId) {
+          const details = await getReportById(previewId);
           if (cancelled) return;
           setLatestReportDetails(details);
         } else {
@@ -48,7 +52,7 @@ export default function LandingPage() {
     };
   }, []);
 
-  const latestReportId = reports[0]?.id;
+  const latestReportId = reports.find((report) => report.status === "analyzed")?.id ?? reports[0]?.id;
   const doctorReportLink = latestReportId ? `/doctor/reports/${latestReportId}` : "/test-upload";
   const patientReportLink = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
   const sharedReportLink = latestReportId ? `/reports/${latestReportId}` : "/test-upload";
@@ -67,6 +71,7 @@ export default function LandingPage() {
   }, [reports]);
 
   const homeFaqs = latestReportDetails?.faqs ?? [];
+  const reportFocus = deriveReportFocus(latestReportDetails);
 
   return (
     <div className="bg-slate-50">
@@ -80,7 +85,7 @@ export default function LandingPage() {
           >
             <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">CareConnect AI</h1>
             <p className="mx-auto max-w-4xl text-base text-slate-600 sm:text-lg">
-              Doctors upload reports, analyze findings, and publish clear explanations. Patients then open one guided page to understand report insights quickly.
+              {reportFocus.siteDescription}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link to="/doctor">
@@ -94,6 +99,20 @@ export default function LandingPage() {
                   Open Patient View
                 </Button>
               </Link>
+            </div>
+            <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+                {reportFocus.concernLabel}
+              </div>
+              <h2 className="mt-3 text-xl font-semibold text-slate-900">{reportFocus.siteHeadline}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{reportFocus.label}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {reportFocus.tags.map((tag) => (
+                  <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           </motion.div>
 
@@ -148,6 +167,40 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-14">
+        <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_1fr]">
+          <motion.article
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            className="card p-6 sm:p-8"
+          >
+            <h2 className="text-xl font-semibold text-slate-900">Latest Report Focus</h2>
+            <p className="mt-2 text-sm text-slate-600">{reportFocus.siteHeadline}</p>
+            <ul className="mt-4 space-y-2 text-sm leading-relaxed text-slate-700">
+              {reportFocus.quickFacts.map((fact, index) => (
+                <li key={`home-focus-${index}`} className="flex items-start gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
+                  <span>{fact}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.article>
+
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+          >
+            <FocusBars
+              bars={reportFocus.bars}
+              title="Latest analysis graph"
+              subtitle="This graph is built from the most recently analyzed report only."
+            />
+          </motion.div>
+        </div>
+      </section>
+
       <section className="py-14 sm:py-20">
         <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
           <motion.div
@@ -161,14 +214,14 @@ export default function LandingPage() {
               <FeatureRow
                 icon={<Users className="h-5 w-5 text-indigo-700" />}
                 title="Doctor Workflow"
-                description="Upload reports and run analysis to generate patient guidance."
+                description={reportFocus.doctorDescription}
                 to={doctorReportLink}
                 tone="teal"
               />
               <FeatureRow
                 icon={<FileText className="h-5 w-5 text-sky-700" />}
                 title="Patient Workflow"
-                description="Open your report page and review generated insights and FAQs."
+                description={reportFocus.patientDescription}
                 to={patientReportLink}
                 tone="sky"
               />
@@ -210,7 +263,9 @@ export default function LandingPage() {
             <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <h3 className="text-sm font-semibold text-slate-900">Understand Your Report Better</h3>
               <p className="mt-1 text-sm text-slate-600">
-                Report guidance is now data-driven from uploaded medical documents.
+                {latestReportDetails
+                  ? `The website is currently reacting to the latest report focus: ${reportFocus.label}.`
+                  : "Report guidance is now data-driven from uploaded medical documents."}
               </p>
               <Link to={sharedReportLink} className="mt-3 inline-flex">
                 <Button size="sm" variant="outline">View Report Guidance</Button>

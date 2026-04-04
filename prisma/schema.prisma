@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Report {
@@ -12,6 +13,7 @@ model Report {
   title           String
   fileName        String
   fileType        String
+  filePath        String?
   rawText         String
   aiSummary       String?
   status          String           @default("uploaded")
@@ -59,10 +61,21 @@ model Recommendation {
 }
 
 model ContactSubmission {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  message   String
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  name             String
+  email            String
+  phone            String?
+  role             String?
+  age              String?
+  gender           String?
+  bloodGroup       String?
+  reportTitle      String?
+  reportFileName   String?
+  reportFileType   String?
+  reportFilePath   String?
+  reportRawText    String?
+  linkedReportId   String?
+  linkedReportStatus String?
+  message          String
+  createdAt        DateTime @default(now())
 }

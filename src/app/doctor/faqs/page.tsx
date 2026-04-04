@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, ChartNoAxesColumn, FileQuestion, LoaderCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { FaqItem } from "../../../components/report-data";
+import { FaqItem, FocusBars } from "../../../components/report-data";
 import { Button } from "../../../components/ui/Button";
-import { getReportById, listReports, type FaqDto, type ReportListItemDto } from "../../../lib/reportApi";
+import { deriveReportFocus } from "../../../lib/reportFocus";
+import { getReportById, listReports, type FaqDto, type ReportDetailsDto, type ReportListItemDto } from "../../../lib/reportApi";
 
 type FaqExplorerItem = FaqDto & {
   reportTitle: string;
@@ -15,6 +16,7 @@ type FaqExplorerItem = FaqDto & {
 export default function DoctorFaqManagementPage() {
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
   const [faqItems, setFaqItems] = useState<FaqExplorerItem[]>([]);
+  const [latestDetails, setLatestDetails] = useState<ReportDetailsDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -49,10 +51,15 @@ export default function DoctorFaqManagementPage() {
           })),
         );
 
+        const previewDetail =
+          detailResponses.find((detail) => detail.report.status === "analyzed") ?? detailResponses[0] ?? null;
+
+        setLatestDetails(previewDetail);
         setFaqItems(mergedFaqs);
       } catch (loadError) {
         if (cancelled) return;
         setError(loadError instanceof Error ? loadError.message : "Could not load FAQ data.");
+        setLatestDetails(null);
         setFaqItems([]);
       } finally {
         if (!cancelled) {
@@ -69,7 +76,7 @@ export default function DoctorFaqManagementPage() {
   }, []);
 
   const categories = useMemo(
-    () => [...new Set(faqItems.map((faq) => faq.category))].sort((a, b) => a.localeCompare(b)),
+    () => Array.from(new Set<string>(faqItems.map((faq) => faq.category))).sort((a, b) => a.localeCompare(b)),
     [faqItems],
   );
 
@@ -104,6 +111,7 @@ export default function DoctorFaqManagementPage() {
   }, [filteredFaqs]);
 
   const maxCategoryCount = categoryDistribution[0]?.[1] || 1;
+  const reportFocus = deriveReportFocus(latestDetails);
 
   return (
     <div className="bg-slate-50 py-10 sm:py-14">
@@ -121,10 +129,39 @@ export default function DoctorFaqManagementPage() {
           <div>
             <h1 className="text-2xl font-bold text-primary sm:text-3xl">FAQ Explanations</h1>
             <p className="mt-1 text-sm text-slate-600">
-              FAQs generated from real report analysis results across your saved reports.
+              {reportFocus.doctorDescription}
             </p>
           </div>
         </motion.header>
+
+        <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <motion.article
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="card-doctor p-6 sm:p-8"
+          >
+            <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+              {reportFocus.concernLabel}
+            </div>
+            <h2 className="mt-3 text-base font-semibold text-slate-900">{reportFocus.label}</h2>
+            <p className="mt-2 text-sm text-slate-600">{reportFocus.siteHeadline}</p>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              {reportFocus.quickFacts.map((fact, index) => (
+                <li key={`faq-focus-${index}`} className="flex items-start gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
+                  <span>{fact}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.article>
+
+          <FocusBars
+            bars={reportFocus.bars}
+            title="Current report graph"
+            subtitle="The FAQ explorer graph is tied to the latest analyzed report."
+          />
+        </section>
 
         <motion.section
           initial={{ opacity: 0, y: 10 }}

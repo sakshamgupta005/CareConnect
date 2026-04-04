@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Plus, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FocusBars } from "../../../components/report-data";
 import { Button } from "../../../components/ui/Button";
+import { deriveReportFocus } from "../../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../../lib/reportApi";
 
 export default function CollaborationWorkspace() {
@@ -22,8 +24,10 @@ export default function CollaborationWorkspace() {
         if (cancelled) return;
         setReports(loadedReports);
 
-        if (loadedReports[0]) {
-          const details = await getReportById(loadedReports[0].id);
+        const previewId = loadedReports.find((report) => report.status === "analyzed")?.id ?? loadedReports[0]?.id;
+
+        if (previewId) {
+          const details = await getReportById(previewId);
           if (cancelled) return;
           setLatestDetails(details);
         } else {
@@ -46,6 +50,8 @@ export default function CollaborationWorkspace() {
     };
   }, []);
 
+  const reportFocus = deriveReportFocus(latestDetails);
+
   return (
     <div className="bg-slate-50 py-8 sm:py-10">
       <div className="mx-auto w-full max-w-6xl space-y-8 px-4 sm:px-6">
@@ -64,7 +70,7 @@ export default function CollaborationWorkspace() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-primary sm:text-3xl">Collaboration Workspace</h1>
-              <p className="text-sm text-slate-600">Report review rooms and generated findings in one place.</p>
+              <p className="text-sm text-slate-600">{reportFocus.doctorDescription}</p>
             </div>
           </div>
 
@@ -134,10 +140,26 @@ export default function CollaborationWorkspace() {
                 transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-secondary/20 blur-3xl"
               />
-              <h3 className="text-lg font-semibold text-slate-900">Latest analysis summary</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                {latestDetails?.report.aiSummary || "Upload and analyze a report to populate this summary."}
-              </p>
+              <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+                {reportFocus.concernLabel}
+              </div>
+              <h3 className="mt-3 text-lg font-semibold text-slate-900">Latest analysis focus</h3>
+              <p className="mt-2 text-sm text-slate-600">{reportFocus.siteHeadline}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {reportFocus.tags.map((tag) => (
+                  <span key={tag} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <ul className="mt-4 space-y-2 text-sm leading-relaxed text-slate-700">
+                {reportFocus.quickFacts.map((fact, index) => (
+                  <li key={`collab-focus-${index}`} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
+                    <span>{fact}</span>
+                  </li>
+                ))}
+              </ul>
               {latestDetails ? (
                 <Link to={`/reports/${latestDetails.report.id}`}>
                   <Button className="mt-4" variant="secondary">Open full results</Button>
@@ -147,6 +169,12 @@ export default function CollaborationWorkspace() {
           </div>
 
           <aside className="space-y-4">
+            <FocusBars
+              bars={reportFocus.bars}
+              title="Latest report graph"
+              subtitle="This workspace graph is built from the current analyzed report only."
+            />
+
             <motion.article
               initial={{ opacity: 0, x: 18 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -177,6 +205,7 @@ export default function CollaborationWorkspace() {
                 <li>Doctor pipeline access: active</li>
                 <li>Patient guidance pages: available</li>
                 <li>Report analysis service: operational</li>
+                <li>Current report focus: {reportFocus.label}</li>
                 <li>Total report rooms: {reports.length}</li>
               </ul>
               {error ? <p className="mt-3 text-sm text-amber-700">{error}</p> : null}

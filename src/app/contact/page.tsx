@@ -1,14 +1,24 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CheckCircle2, ClipboardList, FileText, Link2, Mail, MapPin, MessageCircle, Phone, Share2, Sparkles } from "lucide-react";
+import { CheckCircle2, ClipboardList, FileText, Link2, LoaderCircle, Mail, MapPin, MessageCircle, Phone, Share2, Sparkles, UploadCloud } from "lucide-react";
+import { FocusBars, PatientProfileCard } from "../../components/report-data";
 import { Button } from "../../components/ui/Button";
 import { submitContactForm } from "../../lib/contactApi";
-import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
+import { extractPatientProfile } from "../../lib/patientProfile";
+import { uploadPdfToServer } from "../../lib/pdfUploadApi";
+import { deriveReportFocus } from "../../lib/reportFocus";
+import { analyzeReport, getReportById, listReports, uploadReport, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
 const SITE_URL = "https://CareConnect.com";
 const QR_IMAGE_URL =
   "https://res.cloudinary.com/dyxlavy0j/image/upload/v1775298105/WhatsApp_Image_2026-04-04_at_3.49.17_PM_ss4a3g.jpg";
 const LOGIN_STORAGE_KEY = "careconnect_logged_in";
+const PROFILE_SAMPLE_TEXT = `Patient Name: Priya Sharma
+Age: 45 years
+Gender: Female
+Blood Group: O+
+Hemoglobin: 11.2 g/dL
+Glucose: 96 mg/dL`;
 
 type FeedbackAnswer = "clear" | "simpler" | "doctor" | "unsure";
 
@@ -37,11 +47,24 @@ export default function ContactPage() {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [contactRole, setContactRole] = useState("Hospital Administrator");
+  const [contactRole, setContactRole] = useState("Patient");
+  const [patientAge, setPatientAge] = useState("");
+  const [patientGender, setPatientGender] = useState("");
+  const [patientBloodGroup, setPatientBloodGroup] = useState("");
+  const [reportTitle, setReportTitle] = useState("Patient Lab Report");
+  const [reportFileName, setReportFileName] = useState("patient-report.txt");
+  const [reportFileType, setReportFileType] = useState("text/plain");
+  const [reportFilePath, setReportFilePath] = useState("");
+  const [reportRawText, setReportRawText] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [submitAction, setSubmitAction] = useState<"save" | "analyze" | null>(null);
+  const [reportPdfLoading, setReportPdfLoading] = useState(false);
   const [contactSubmitError, setContactSubmitError] = useState("");
+  const [contactStatusMessage, setContactStatusMessage] = useState("");
   const [contactSubmissionId, setContactSubmissionId] = useState("");
+  const [savedReportId, setSavedReportId] = useState("");
+  const [savedReportStatus, setSavedReportStatus] = useState<"uploaded" | "analyzed" | "">("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [shareState, setShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
@@ -79,7 +102,9 @@ export default function ContactPage() {
         const loadedReports = await listReports();
         if (cancelled) return;
         setReports(loadedReports);
-        setSelectedReportId((current) => current || loadedReports[0]?.id || "");
+        const preferredReportId =
+          loadedReports.find((report) => report.status === "analyzed")?.id ?? loadedReports[0]?.id ?? "";
+        setSelectedReportId((current) => current || preferredReportId);
       } catch (error) {
         if (cancelled) return;
         setFeedbackError(error instanceof Error ? error.message : "Could not load reports.");
@@ -132,30 +157,140 @@ export default function ContactPage() {
     };
   }, [selectedReportId]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setContactSubmitting(true);
+  const selectedReportFocus = deriveReportFocus(selectedReportDetails);
+  const compiledReportText = useMemo(
+    () =>
+      buildSubmissionReportText({
+        patientName: contactName,
+        age: patientAge,
+        gender: patientGender,
+        bloodGroup: patientBloodGroup,
+        reportText: reportRawText,
+      }),
+    [contactName, patientAge, patientGender, patientBloodGroup, reportRawText],
+  );
+  const detectedProfile = useMemo(
+    () =>
+      extractPatientProfile({
+        title: reportTitle.trim() || "Patient Lab Report",
+        rawText: compiledReportText,
+      }),
+    [compiledReportText, reportTitle],
+  );
+
+  const handleExtractPdf = async (file: File) => {
+    if (!file) return;
+
     setContactSubmitError("");
+    setContactStatusMessage("");
+    setReportPdfLoading(true);
 
     try {
+      const uploaded = await uploadPdfToServer(file);
+      setReportRawText(uploaded.reportText);
+      setReportFileName(uploaded.originalFileName);
+      setReportFileType("application/pdf");
+      setReportFilePath(uploaded.filePath);
+      setContactStatusMessage("PDF parsed successfully. The extracted text is ready to save or analyze.");
+    } catch (error) {
+      setContactSubmitError(error instanceof Error ? error.message : "Could not parse PDF.");
+    } finally {
+      setReportPdfLoading(false);
+    }
+  };
+
+  const handleInsertSampleLayout = () => {
+    setReportRawText((current) => (current.trim() ? `${PROFILE_SAMPLE_TEXT}\n\n${current}` : PROFILE_SAMPLE_TEXT));
+    if (!patientAge.trim()) setPatientAge("45 years");
+    if (!patientGender.trim()) setPatientGender("Female");
+    if (!patientBloodGroup.trim()) setPatientBloodGroup("O+");
+    if (!contactName.trim()) setContactName("Priya Sharma");
+    if (!reportTitle.trim()) setReportTitle("Patient Lab Report");
+    setContactStatusMessage("Sample profile layout inserted. The detector should now see age, gender, and blood group.");
+    setContactSubmitError("");
+  };
+
+  const handleSaveSubmission = async (shouldAnalyze: boolean) => {
+    if (shouldAnalyze && !reportRawText.trim()) {
+      setContactSubmitError("Add report text or upload a PDF before running analysis.");
+      return;
+    }
+
+    setSubmitAction(shouldAnalyze ? "analyze" : "save");
+    setContactSubmitting(true);
+    setContactSubmitError("");
+    setContactStatusMessage("");
+
+    try {
+      const hasReportContent = Boolean(reportRawText.trim());
+      const normalizedReportTitle = reportTitle.trim() || `${contactName.trim() || "Patient"} Report`;
+      const normalizedFileName = reportFileName.trim() || (reportFilePath.trim() ? "patient-report.pdf" : "patient-report.txt");
+      const normalizedFileType = reportFileType.trim() || (reportFilePath.trim() ? "application/pdf" : "text/plain");
+      let linkedReportId = "";
+      let linkedReportStatus: "uploaded" | "analyzed" | undefined;
+
+      if (hasReportContent) {
+        const savedReport = await uploadReport({
+          title: normalizedReportTitle,
+          fileName: normalizedFileName,
+          fileType: normalizedFileType,
+          filePath: reportFilePath.trim() || undefined,
+          rawText: compiledReportText,
+        });
+
+        linkedReportId = savedReport.id;
+        linkedReportStatus = "uploaded";
+
+        if (shouldAnalyze) {
+          const analyzedReport = await analyzeReport(savedReport.id);
+          linkedReportId = analyzedReport.report.id;
+          linkedReportStatus = "analyzed";
+          setSelectedReportId(analyzedReport.report.id);
+        } else {
+          setSelectedReportId(savedReport.id);
+        }
+      }
+
       const result = await submitContactForm({
         name: contactName,
         email: contactEmail,
         phone: contactPhone || undefined,
-        message: `Role: ${contactRole}\n${contactMessage}`,
+        role: contactRole,
+        age: patientAge || undefined,
+        gender: patientGender || undefined,
+        bloodGroup: patientBloodGroup || undefined,
+        reportTitle: hasReportContent ? normalizedReportTitle : undefined,
+        reportFileName: hasReportContent ? normalizedFileName : undefined,
+        reportFileType: hasReportContent ? normalizedFileType : undefined,
+        reportFilePath: hasReportContent ? reportFilePath || undefined : undefined,
+        reportRawText: hasReportContent ? compiledReportText : undefined,
+        linkedReportId: linkedReportId || undefined,
+        linkedReportStatus: linkedReportStatus,
+        message: contactMessage.trim() || "Patient submission received through CareConnect.",
       });
 
       setContactSubmissionId(result.id);
+      setSavedReportId(linkedReportId);
+      setSavedReportStatus(linkedReportStatus ?? "");
       setSubmitted(true);
       setContactName("");
       setContactEmail("");
       setContactPhone("");
-      setContactRole("Hospital Administrator");
+      setContactRole("Patient");
+      setPatientAge("");
+      setPatientGender("");
+      setPatientBloodGroup("");
+      setReportTitle("Patient Lab Report");
+      setReportFileName("patient-report.txt");
+      setReportFileType("text/plain");
+      setReportFilePath("");
+      setReportRawText("");
       setContactMessage("");
     } catch (error) {
-      setContactSubmitError(error instanceof Error ? error.message : "Could not send your message.");
+      setContactSubmitError(error instanceof Error ? error.message : "Could not save submission.");
     } finally {
       setContactSubmitting(false);
+      setSubmitAction(null);
     }
   };
 
@@ -173,13 +308,26 @@ export default function ContactPage() {
       return "CareConnect AI explains doctor-uploaded reports clearly.\nPlease log in first, then ask your report questions again.";
     }
 
-    return "CareConnect AI helps patients understand uploaded medical reports.\nTry asking: What does low hemoglobin mean? Why is vitamin D low? What does high cholesterol mean?";
+    if (!selectedReportDetails || selectedReportDetails.report.status !== "analyzed") {
+      return "CareConnect AI will prepare report-specific guidance after analysis is completed.\nPlease select an analyzed report to share focused questions and explanations.";
+    }
+
+    const promptLines = selectedReportFocus.conversationPrompts
+      .slice(0, 3)
+      .map((prompt, index) => `${index + 1}. ${prompt}`)
+      .join("\n");
+
+    return `CareConnect AI report focus: ${selectedReportFocus.label}
+Report: ${selectedReportDetails.report.title}
+${selectedReportFocus.siteHeadline}
+Helpful questions:
+${promptLines}`;
   };
 
   const getCombinedShareText = () => `${getQrLinkText()}\n\n${getAutoMessageText()}`;
 
   const feedbackQuestions = useMemo<FeedbackQuestion[]>(() => {
-    if (!selectedReportDetails) return [];
+    if (!selectedReportDetails || selectedReportDetails.report.status !== "analyzed") return [];
 
     const fromInsights = selectedReportDetails.insights.slice(0, 3).map((insight) => ({
       id: `insight-${insight.id}`,
@@ -194,31 +342,26 @@ export default function ContactPage() {
     }));
 
     const combined = [...fromInsights, ...fromFaqs];
-    if (combined.length === 0) {
-      combined.push({
-        id: "general-1",
-        source: "general",
-        question: "Do you want a simpler explanation for your uploaded report?",
-      });
-    }
-
     return combined;
   }, [selectedReportDetails]);
 
   const feedbackFlowMessage = useMemo(() => {
-    if (!selectedReportDetails) {
-      return "CareConnect report feedback flow is ready.\nPlease upload and analyze a report to begin targeted WhatsApp questions.";
+    if (!selectedReportDetails || selectedReportDetails.report.status !== "analyzed") {
+      return "CareConnect report feedback flow is ready.\nPlease upload and analyze a report to begin targeted WhatsApp questions and condition-specific guidance.";
     }
 
     const lines = feedbackQuestions.map((item, index) => `${index + 1}. ${item.question}`);
 
-    return `CareConnect Report Feedback\nReport: ${selectedReportDetails.report.title}\nPlease reply with the question number + your response:\n${lines.join(
-      "\n",
-    )}`;
-  }, [selectedReportDetails, feedbackQuestions]);
+    return `CareConnect Report Feedback
+Report: ${selectedReportDetails.report.title}
+Current focus: ${selectedReportFocus.label}
+Focus note: ${selectedReportFocus.siteHeadline}
+Please reply with the question number + your response:
+${lines.join("\n")}`;
+  }, [selectedReportDetails, feedbackQuestions, selectedReportFocus]);
 
   const feedbackSummaryMessage = useMemo(() => {
-    if (!selectedReportDetails) {
+    if (!selectedReportDetails || selectedReportDetails.report.status !== "analyzed") {
       return "No report selected for feedback summary.";
     }
 
@@ -231,14 +374,21 @@ export default function ContactPage() {
       .filter((line): line is string => Boolean(line));
 
     if (answered.length === 0) {
-      return `CareConnect Follow-up\nReport: ${selectedReportDetails.report.title}\nNo feedback responses have been selected yet.`;
+      return `CareConnect Follow-up
+Report: ${selectedReportDetails.report.title}
+Current focus: ${selectedReportFocus.label}
+No feedback responses have been selected yet.`;
     }
 
-    return `CareConnect Follow-up\nReport: ${selectedReportDetails.report.title}\nPatient responses:\n${answered.join("\n")}`;
-  }, [selectedReportDetails, feedbackQuestions, feedbackAnswers]);
+    return `CareConnect Follow-up
+Report: ${selectedReportDetails.report.title}
+Current focus: ${selectedReportFocus.label}
+Patient responses:
+${answered.join("\n")}`;
+  }, [selectedReportDetails, feedbackQuestions, feedbackAnswers, selectedReportFocus]);
 
   const websiteEditNotes = useMemo(() => {
-    if (!selectedReportDetails) {
+    if (!selectedReportDetails || selectedReportDetails.report.status !== "analyzed") {
       return "No website edit notes available yet. Select an analyzed report first.";
     }
 
@@ -248,6 +398,8 @@ export default function ContactPage() {
 
     const notes: string[] = [
       `Report: ${selectedReportDetails.report.title}`,
+      `Detected focus: ${selectedReportFocus.label}`,
+      `Content tags: ${selectedReportFocus.tags.join(", ")}`,
       "Website edit targets:",
       "- src/app/patient/reports/report-detail-page.tsx",
       "- src/components/report-data/ReportResultsView.tsx",
@@ -279,7 +431,7 @@ export default function ContactPage() {
     }
 
     return notes.join("\n");
-  }, [selectedReportDetails, feedbackQuestions, feedbackAnswers]);
+  }, [selectedReportDetails, feedbackQuestions, feedbackAnswers, selectedReportFocus]);
 
   const whatsappShareLink = `https://wa.me/?text=${encodeURIComponent(
     getCombinedShareText(),
@@ -648,7 +800,9 @@ export default function ContactPage() {
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-900">Report-specific Conversation Flow</h2>
                 <p className="text-sm text-slate-600">
-                  CareConnect builds targeted WhatsApp questions from report findings and FAQs, then prepares follow-up + website update notes from responses.
+                  {selectedReportDetails?.report.status === "analyzed"
+                    ? `CareConnect is using the analyzed report focus "${selectedReportFocus.label}" to drive questions, guidance, and follow-up notes.`
+                    : "CareConnect builds targeted WhatsApp questions after a report has been analyzed."}
                 </p>
               </div>
 
@@ -667,6 +821,21 @@ export default function ContactPage() {
                   ))}
                 </select>
               </label>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${selectedReportFocus.concernClassName}`}>
+                  {selectedReportFocus.concernLabel}
+                </div>
+                <p className="mt-3 text-sm font-semibold text-slate-900">{selectedReportFocus.label}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{selectedReportFocus.patientDescription}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedReportFocus.tags.map((tag) => (
+                    <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -706,6 +875,12 @@ export default function ContactPage() {
             </div>
 
             <div className="space-y-4">
+              <FocusBars
+                bars={selectedReportFocus.bars}
+                title="Selected report graph"
+                subtitle="This graph updates from the selected analyzed report only."
+              />
+
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
                 <p className="inline-flex items-center gap-2 font-semibold text-slate-800">
                   <MessageCircle className="h-4 w-4 text-secondary" />

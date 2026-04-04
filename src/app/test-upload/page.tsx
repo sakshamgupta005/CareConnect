@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { LoaderCircle, UploadCloud } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { ReportResultsView } from "../../components/report-data";
+import { PatientProfileCard, ReportResultsView } from "../../components/report-data";
+import { extractPatientProfile } from "../../lib/patientProfile";
 import { uploadPdfToServer } from "../../lib/pdfUploadApi";
 import {
   analyzeReport,
@@ -16,6 +17,7 @@ export default function TestUploadPage() {
   const [fileName, setFileName] = useState("manual-report.txt");
   const [fileType, setFileType] = useState("text/plain");
   const [rawText, setRawText] = useState("");
+  const [filePath, setFilePath] = useState("");
   const [reportId, setReportId] = useState("");
   const [details, setDetails] = useState<ReportDetailsDto | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -23,6 +25,7 @@ export default function TestUploadPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const detectedProfile = extractPatientProfile({ title, rawText });
 
   const handleExtractPdf = async (file: File) => {
     if (!file) return;
@@ -36,6 +39,7 @@ export default function TestUploadPage() {
       setRawText(uploaded.reportText);
       setFileName(uploaded.originalFileName);
       setFileType("application/pdf");
+      setFilePath(uploaded.filePath);
       setMessage("PDF parsed successfully. You can now save and analyze this report.");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Could not parse PDF.");
@@ -55,6 +59,7 @@ export default function TestUploadPage() {
         title: title.trim() || "Clinical Report",
         fileName: fileName.trim() || "manual-report.txt",
         fileType: fileType.trim() || "text/plain",
+        filePath: filePath.trim() || undefined,
         rawText,
       });
 
@@ -206,6 +211,14 @@ export default function TestUploadPage() {
             />
           </label>
 
+          <div className="mt-4">
+            <PatientProfileCard
+              profile={detectedProfile}
+              title="Detected patient details"
+              subtitle="This updates live while you type or paste report text."
+            />
+          </div>
+
           <div className="mt-4 flex flex-wrap gap-3">
             <Button onClick={handleSaveReport} disabled={saveLoading || pdfLoading || !rawText.trim()}>
               {saveLoading ? "Saving..." : "Save Report"}
@@ -239,4 +252,3 @@ export default function TestUploadPage() {
     </div>
   );
 }
-

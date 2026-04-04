@@ -121,6 +121,7 @@ export default function DoctorReportDetailsPage() {
         title: titleInput.trim() || "Uploaded Clinical Report",
         fileName: uploaded.originalFileName,
         fileType: "application/pdf",
+        filePath: uploaded.filePath,
         rawText: uploaded.reportText,
       });
 

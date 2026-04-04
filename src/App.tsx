@@ -19,6 +19,7 @@ import DoctorFaqManagementPage from "./app/doctor/faqs/page";
 import DoctorReportDetailsPage from "./app/doctor/reports/report-detail-page";
 import PatientReportDetailsPage from "./app/patient/reports/report-detail-page";
 import DoctorDataPage from "./app/doctor/data/page";
+import SubmissionsPage from "./app/submissions/page";
 import ReportResultsPage from "./app/reports/report-results-page";
 import TestUploadPage from "./app/test-upload/page";
 import {
@@ -175,6 +176,7 @@ function AppContent() {
               <Route path="/product" element={<ProductPage />} />
               <Route path="/doctor" element={<DoctorDashboard />} />
               <Route path="/doctor/data" element={<DoctorDataPage />} />
+              <Route path="/doctor/submissions" element={<SubmissionsPage />} />
               <Route path="/doctor/faqs" element={<DoctorFaqManagementPage />} />
               <Route path="/doctor/reports/:reportId" element={<DoctorReportDetailsPage />} />
               <Route path="/doctor/collaboration" element={<CollaborationWorkspace />} />

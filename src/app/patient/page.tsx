@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, BookOpenCheck, FileText, MessageCircle, TrendingUp, UserRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, FileText, LoaderCircle, MessageCircle, TrendingUp, UserRound } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { FocusBars, PatientProfileCard } from "../../components/report-data";
 import { Button } from "../../components/ui/Button";
-import { listReports, type ReportListItemDto } from "../../lib/reportApi";
+import { extractPatientProfile } from "../../lib/patientProfile";
+import { deriveReportFocus } from "../../lib/reportFocus";
+import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
 const SITE_URL = "https://CareConnect.com";
 
 export default function PatientDashboard() {
   const location = useLocation();
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
+  const [latestDetails, setLatestDetails] = useState<ReportDetailsDto | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [selectedProfileDetails, setSelectedProfileDetails] = useState<ReportDetailsDto | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,6 +31,19 @@ export default function PatientDashboard() {
         const loaded = await listReports();
         if (cancelled) return;
         setReports(loaded);
+
+        const previewId = loaded.find((report) => report.status === "analyzed")?.id ?? loaded[0]?.id;
+        if (previewId) {
+          const details = await getReportById(previewId);
+          if (cancelled) return;
+          setLatestDetails(details);
+          setSelectedProfileId(previewId);
+          setSelectedProfileDetails(details);
+        } else {
+          setLatestDetails(null);
+          setSelectedProfileId("");
+          setSelectedProfileDetails(null);
+        }
       } catch (loadError) {
         if (cancelled) return;
         setError(loadError instanceof Error ? loadError.message : "Could not load reports.");
@@ -40,6 +60,44 @@ export default function PatientDashboard() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedProfileId) {
+      setProfileLoading(false);
+      setSelectedProfileDetails(null);
+      return;
+    }
+
+    if (latestDetails?.report.id === selectedProfileId) {
+      setProfileLoading(false);
+      setSelectedProfileDetails(latestDetails);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSelectedProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const details = await getReportById(selectedProfileId);
+        if (cancelled) return;
+        setSelectedProfileDetails(details);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError.message : "Could not load selected patient profile.");
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    void loadSelectedProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [latestDetails, selectedProfileId]);
 
   useEffect(() => {
     if (location.hash !== "#patient-report-explanation") {
@@ -70,7 +128,7 @@ export default function PatientDashboard() {
     return { totalReports, analyzedReports, totalInsights, totalFaqs, understandingScore };
   }, [reports]);
 
-  const latestReportId = reports[0]?.id;
+  const latestReportId = reports.find((report) => report.status === "analyzed")?.id ?? reports[0]?.id;
   const latestReportRoute = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
   const whatsappHelpMessage = useMemo(() => {
     const reportLink = latestReportId ? `${SITE_URL}/patient/reports/${latestReportId}` : `${SITE_URL}/patient`;
@@ -83,6 +141,13 @@ Questions I can ask:
 3. What should I discuss with my doctor next?`;
   }, [latestReportId]);
   const whatsappHelpLink = `https://wa.me/?text=${encodeURIComponent(whatsappHelpMessage)}`;
+  const reportFocus = deriveReportFocus(latestDetails);
+  const selectedProfile = selectedProfileDetails
+    ? extractPatientProfile({
+        title: selectedProfileDetails.report.title,
+        rawText: selectedProfileDetails.report.rawText,
+      })
+    : null;
 
   return (
     <div className="bg-slate-50 py-10 sm:py-14">
@@ -90,7 +155,7 @@ Questions I can ask:
         <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
           <h1 className="text-2xl font-bold text-primary sm:text-3xl">Patient Dashboard</h1>
           <p className="text-sm text-slate-600">
-            View analyzed report insights, FAQs, and recommendations from your care team workflow.
+            {reportFocus.patientDescription}
           </p>
         </motion.header>
 
@@ -111,7 +176,7 @@ Questions I can ask:
               </p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900">Recommended Explanations</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Open your latest analyzed report to read personalized explanation FAQs.
+                {reportFocus.siteHeadline}
               </p>
             </div>
             <Link to={latestReportRoute}>
@@ -124,6 +189,13 @@ Questions I can ask:
             <MetricPill label="Reports" value={`${patientPulse.totalReports}`} />
             <MetricPill label="Analyzed" value={`${patientPulse.analyzedReports}`} />
             <MetricPill label="Understanding Score" value={`${patientPulse.understandingScore}%`} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {reportFocus.tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+                {tag}
+              </span>
+            ))}
           </div>
           {error ? <p className="mt-3 text-sm text-amber-700">{error}</p> : null}
         </motion.section>
@@ -146,6 +218,7 @@ Questions I can ask:
                     report.counts.insights > 0
                       ? Math.min(100, Math.round((report.counts.faqs / report.counts.insights) * 100))
                       : 0;
+                  const profile = extractPatientProfile({ title: report.title, rawText: report.rawText });
 
                   return (
                     <div key={report.id} className="rounded-xl border border-slate-200 bg-white p-4">
@@ -153,16 +226,30 @@ Questions I can ask:
                       <p className="mt-1 text-xs text-slate-600">
                         {report.counts.faqs} explanation{report.counts.faqs === 1 ? "" : "s"} | status: {report.status}
                       </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {renderProfileChip("Age", profile.age)}
+                        {renderProfileChip("Gender", profile.gender)}
+                        {renderProfileChip("Blood", profile.bloodType)}
+                      </div>
                       <div className="mt-2">
                         <div className="insight-track">
                           <div className="insight-fill bg-sky-500" style={{ width: `${Math.max(6, progress)}%` }} />
                         </div>
                       </div>
-                      <Link to={`/patient/reports/${report.id}`} className="mt-3 inline-flex">
-                        <Button size="sm" variant="outline">
-                          Open Report
-                        </Button>
-                      </Link>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProfileId(report.id)}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                        >
+                          Open Profile
+                        </button>
+                        <Link to={`/patient/reports/${report.id}`} className="inline-flex">
+                          <Button size="sm" variant="outline">
+                            Open Report
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   );
                 })
@@ -180,14 +267,36 @@ Questions I can ask:
             viewport={{ once: true }}
             className="card-patient p-6 sm:p-8"
           >
+            {profileLoading ? (
+              <div className="mb-4 inline-flex items-center gap-2 text-sm text-secondary">
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Loading selected patient profile...
+              </div>
+            ) : null}
+            {selectedProfile ? (
+              <div className="mb-4">
+                <PatientProfileCard
+                  profile={selectedProfile}
+                  title="Selected patient profile"
+                  subtitle="Click any report on the left and this area opens that patient data."
+                  actions={
+                    selectedProfileDetails ? (
+                      <Link to={`/patient/reports/${selectedProfileDetails.report.id}`}>
+                        <Button size="sm" variant="outline">Open Full Report</Button>
+                      </Link>
+                    ) : null
+                  }
+                />
+              </div>
+            ) : null}
             <div className="inline-flex rounded-lg bg-secondary/10 p-2">
               <BookOpenCheck className="h-5 w-5 text-secondary" />
             </div>
             <h2 className="mt-3 text-lg font-semibold text-slate-900">How it works</h2>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li>Doctor uploads report text or PDF from the dashboard.</li>
-              <li>The report is analyzed and converted into insights and FAQs.</li>
-              <li>You open your report page and read clear explanation cards.</li>
+              {reportFocus.quickFacts.map((fact, index) => (
+                <li key={`patient-focus-${index}`}>{fact}</li>
+              ))}
             </ul>
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
@@ -195,23 +304,15 @@ Questions I can ask:
                 Care Team Mode
               </p>
               <p className="mt-1 text-sm text-slate-700">
-                This experience is doctor-guided and report-based, with no chatbot-only flow.
+                {reportFocus.patientDescription}
               </p>
             </div>
-            <div className="mt-4 rounded-xl border border-sky-200/70 bg-white/80 p-4">
-              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-                <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
-                Guidance Progress
-              </p>
-              <div className="mt-2 insight-track">
-                <div
-                  className="insight-fill bg-sky-500"
-                  style={{ width: `${Math.max(6, patientPulse.understandingScore)}%` }}
-                />
-              </div>
-              <p className="mt-2 text-xs text-slate-600">
-                Calculated from FAQ count versus extracted report insights.
-              </p>
+            <div className="mt-4">
+              <FocusBars
+                bars={reportFocus.bars}
+                title="Report-only graph"
+                subtitle="Built from the latest analyzed report, not from generic website data."
+              />
             </div>
           </motion.article>
         </section>
@@ -229,7 +330,7 @@ Questions I can ask:
               </p>
               <h2 className="mt-2 text-lg font-semibold text-slate-900">Use WhatsApp for easier support</h2>
               <p className="mt-1 text-sm text-slate-600">
-                If app navigation feels difficult, tap once to open WhatsApp with a ready patient-help message.
+                If app navigation feels difficult, tap once to open WhatsApp with a ready patient-help message based on the latest analyzed report focus.
               </p>
             </div>
             <a href={whatsappHelpLink} target="_blank" rel="noreferrer">
@@ -242,6 +343,17 @@ Questions I can ask:
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message preview</p>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">{whatsappHelpMessage}</p>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
+                Suggested questions
+              </p>
+              <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                {reportFocus.conversationPrompts.map((prompt, index) => (
+                  <li key={`patient-prompt-${index}`}>{index + 1}. {prompt}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </motion.section>
       </div>
@@ -255,5 +367,13 @@ function MetricPill({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
+  );
+}
+
+function renderProfileChip(label: string, value: string | null) {
+  return (
+    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+      {label}: {value || "NA"}
+    </span>
   );
 }
