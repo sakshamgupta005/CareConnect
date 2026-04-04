@@ -1,12 +1,73 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { faqs, stats } from "../data/mock";
+import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../lib/reportApi";
 import { cn } from "../lib/utils";
 
 export default function LandingPage() {
+  const [reports, setReports] = useState<ReportListItemDto[]>([]);
+  const [latestReportDetails, setLatestReportDetails] = useState<ReportDetailsDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      setLoadError("");
+      try {
+        const loadedReports = await listReports();
+        if (cancelled) return;
+
+        setReports(loadedReports);
+
+        if (loadedReports.length > 0) {
+          const details = await getReportById(loadedReports[0].id);
+          if (cancelled) return;
+          setLatestReportDetails(details);
+        } else {
+          setLatestReportDetails(null);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : "Could not load report data.");
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const latestReportId = reports[0]?.id;
+  const doctorReportLink = latestReportId ? `/doctor/reports/${latestReportId}` : "/test-upload";
+  const patientReportLink = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
+  const sharedReportLink = latestReportId ? `/reports/${latestReportId}` : "/test-upload";
+
+  const dashboardStats = useMemo(() => {
+    const analyzedCount = reports.filter((report) => report.status === "analyzed").length;
+    const totalInsights = reports.reduce((sum, report) => sum + report.counts.insights, 0);
+    const totalFaqs = reports.reduce((sum, report) => sum + report.counts.faqs, 0);
+
+    return [
+      { label: "Reports Saved", value: `${reports.length}` },
+      { label: "Reports Analyzed", value: `${analyzedCount}` },
+      { label: "Insights Extracted", value: `${totalInsights}` },
+      { label: "FAQs Generated", value: `${totalFaqs}` },
+    ];
+  }, [reports]);
+
+  const homeFaqs = latestReportDetails?.faqs ?? [];
+
   return (
     <div className="bg-slate-50">
       <section className="py-14 sm:py-20">
@@ -19,7 +80,7 @@ export default function LandingPage() {
           >
             <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">CareConnect AI</h1>
             <p className="mx-auto max-w-4xl text-base text-slate-600 sm:text-lg">
-              Doctors upload reports, curate findings, and assign explanation FAQs. Patients then open a clean guidance page to understand their report clearly.
+              Doctors upload reports, analyze findings, and publish clear explanations. Patients then open one guided page to understand report insights quickly.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link to="/doctor">
@@ -42,15 +103,15 @@ export default function LandingPage() {
               title="Doctor Uploads Report"
               description="The doctor uploads a text-based report file from the dashboard."
               delay={0}
-              to="/doctor/reports/report_1#report-upload"
+              to="/test-upload"
               tone="sky"
             />
             <WorkflowCard
               icon={<MessageSquare className="h-5 w-5 text-violet-700" />}
               title="Doctor Adds FAQ Questions"
-              description="The doctor adds recommended FAQ questions for the patient."
+              description="FAQs are generated and saved from analyzed report content."
               delay={0.06}
-              to="/doctor/faqs#faq-form"
+              to="/doctor/faqs"
               tone="violet"
             />
             <WorkflowCard
@@ -58,16 +119,19 @@ export default function LandingPage() {
               title="Patient Gets Explanation"
               description="The patient clicks a question and sees report-based explanation instantly."
               delay={0.12}
-              to="/patient/reports/report_1#recommended-faqs"
+              to={patientReportLink}
               tone="teal"
             />
           </div>
+          {loadError ? (
+            <p className="text-center text-sm text-amber-700">{loadError}</p>
+          ) : null}
         </div>
       </section>
 
       <section className="border-y border-slate-200 bg-white py-14">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-4 px-4 sm:px-6 md:grid-cols-4">
-          {stats.map((stat, index) => (
+          {dashboardStats.map((stat, index) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 18, scale: 0.95 }}
@@ -97,21 +161,21 @@ export default function LandingPage() {
               <FeatureRow
                 icon={<Users className="h-5 w-5 text-indigo-700" />}
                 title="Doctor Workflow"
-                description="Upload reports, define findings, and assign reusable explanations."
-                to="/doctor/reports/report_1"
+                description="Upload reports and run analysis to generate patient guidance."
+                to={doctorReportLink}
                 tone="teal"
               />
               <FeatureRow
                 icon={<FileText className="h-5 w-5 text-sky-700" />}
                 title="Patient Workflow"
-                description="Open your report page and read doctor-selected explanations."
-                to="/patient/reports/report_1"
+                description="Open your report page and review generated insights and FAQs."
+                to={patientReportLink}
                 tone="sky"
               />
               <FeatureRow
                 icon={<ShieldCheck className="h-5 w-5 text-amber-700" />}
                 title="Trust and Compliance"
-                description="Privacy and security controls around every FAQ workflow."
+                description="Privacy-focused report processing and controlled access flow."
                 to="/trust-and-compliance"
                 tone="amber"
               />
@@ -128,27 +192,27 @@ export default function LandingPage() {
             <ul className="mt-5 space-y-3 text-sm text-slate-700">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-secondary" />
-                Doctor-curated reusable FAQ explanation library
+                Report text is persisted and analyzed with deterministic rules
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-secondary" />
-                Report findings and tag-based FAQ suggestions
+                Insights, FAQs, and recommendations are stored in Prisma
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-secondary" />
-                Patient-first accordion view for easier understanding
+                Compact visualization for key report metrics
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-secondary" />
-                Simple clinical workflow with manual assignment control
+                Patient-first accordion FAQ reading experience
               </li>
             </ul>
             <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <h3 className="text-sm font-semibold text-slate-900">Understand Your Report Better</h3>
               <p className="mt-1 text-sm text-slate-600">
-                Doctors can add simple explanations and helpful guidance related to your report.
+                Report guidance is now data-driven from uploaded medical documents.
               </p>
-              <Link to="/patient/reports/report_1" className="mt-3 inline-flex">
+              <Link to={sharedReportLink} className="mt-3 inline-flex">
                 <Button size="sm" variant="outline">View Report Guidance</Button>
               </Link>
             </div>
@@ -168,17 +232,23 @@ export default function LandingPage() {
             Frequently asked questions
           </motion.h2>
           <div className="mt-6 space-y-3">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={faq.question}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.6 }}
-                transition={{ delay: index * 0.05, duration: 0.3 }}
-              >
-                <FAQItem question={faq.question} answer={faq.answer} />
-              </motion.div>
-            ))}
+            {homeFaqs.length > 0 ? (
+              homeFaqs.slice(0, 4).map((faq, index) => (
+                <motion.div
+                  key={faq.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.6 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                >
+                  <FAQItem question={faq.question} answer={faq.answer} />
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">
+                {isLoading ? "Loading FAQs from the latest report..." : "No report FAQs available yet."}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -194,9 +264,9 @@ export default function LandingPage() {
           >
             <h2 className="text-2xl font-bold sm:text-3xl">Ready to start the FAQ recommendation flow?</h2>
             <p className="mt-2 max-w-2xl text-slate-200">
-              Go to the doctor dashboard, curate FAQ explanations, and assign guidance to a patient report.
+              Upload a report, analyze it, and share clear explanation guidance with patients.
             </p>
-            <Link to="/doctor/reports/report_1" className="mt-5 inline-block">
+            <Link to={doctorReportLink} className="mt-5 inline-block">
               <Button variant="secondary" size="lg">Go to Doctor Dashboard</Button>
             </Link>
           </motion.div>

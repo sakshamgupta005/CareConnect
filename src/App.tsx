@@ -18,6 +18,9 @@ import TrustAndCompliancePage from "./app/trust-and-compliance/page";
 import DoctorFaqManagementPage from "./app/doctor/faqs/page";
 import DoctorReportDetailsPage from "./app/doctor/reports/report-detail-page";
 import PatientReportDetailsPage from "./app/patient/reports/report-detail-page";
+import DoctorDataPage from "./app/doctor/data/page";
+import ReportResultsPage from "./app/reports/report-results-page";
+import TestUploadPage from "./app/test-upload/page";
 import {
   clearAuthSession,
   loadAuthSession,
@@ -171,11 +174,14 @@ function AppContent() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/product" element={<ProductPage />} />
               <Route path="/doctor" element={<DoctorDashboard />} />
+              <Route path="/doctor/data" element={<DoctorDataPage />} />
               <Route path="/doctor/faqs" element={<DoctorFaqManagementPage />} />
               <Route path="/doctor/reports/:reportId" element={<DoctorReportDetailsPage />} />
               <Route path="/doctor/collaboration" element={<CollaborationWorkspace />} />
               <Route path="/patient" element={<PatientDashboard />} />
               <Route path="/patient/reports/:reportId" element={<PatientReportDetailsPage />} />
+              <Route path="/reports/:reportId" element={<ReportResultsPage />} />
+              <Route path="/test-upload" element={<TestUploadPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/patient-assistant" element={<PatientAssistantPage />} />

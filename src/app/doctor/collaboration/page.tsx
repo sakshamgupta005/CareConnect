@@ -1,10 +1,51 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Plus, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/Button";
-import { researchProjects } from "../../../data/mock";
+import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../../lib/reportApi";
 
 export default function CollaborationWorkspace() {
+  const [reports, setReports] = useState<ReportListItemDto[]>([]);
+  const [latestDetails, setLatestDetails] = useState<ReportDetailsDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const loadedReports = await listReports();
+        if (cancelled) return;
+        setReports(loadedReports);
+
+        if (loadedReports[0]) {
+          const details = await getReportById(loadedReports[0].id);
+          if (cancelled) return;
+          setLatestDetails(details);
+        } else {
+          setLatestDetails(null);
+        }
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError.message : "Could not load collaboration data.");
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="bg-slate-50 py-8 sm:py-10">
       <div className="mx-auto w-full max-w-6xl space-y-8 px-4 sm:px-6">
@@ -23,54 +64,62 @@ export default function CollaborationWorkspace() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-primary sm:text-3xl">Collaboration Workspace</h1>
-              <p className="text-sm text-slate-600">Team chat, notes, and communication threads in one place.</p>
+              <p className="text-sm text-slate-600">Report review rooms and generated findings in one place.</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline">
-              <Plus className="h-4 w-4" /> New project
-            </Button>
-            <Button>
-              <Share2 className="h-4 w-4" /> Share workspace
-            </Button>
+            <Link to="/test-upload">
+              <Button variant="outline">
+                <Plus className="h-4 w-4" /> New upload
+              </Button>
+            </Link>
+            <Link to="/doctor/faqs">
+              <Button>
+                <Share2 className="h-4 w-4" /> FAQ explorer
+              </Button>
+            </Link>
           </div>
         </motion.header>
 
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
-              {researchProjects.map((project, index) => (
-                <motion.article
-                  key={project.id}
-                  initial={{ opacity: 0, y: 18 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.35 }}
-                  transition={{ delay: index * 0.08, duration: 0.34 }}
-                  whileHover={{ y: -4 }}
-                  className="card p-4"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-sm font-semibold text-slate-900">{project.title}</h2>
-                    <span className="text-xs text-slate-500">{project.updatedAt}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{project.update}</p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex -space-x-1">
-                      {project.members.map((member) => (
-                        <motion.span
-                          key={member}
-                          whileHover={{ y: -2, scale: 1.06 }}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white bg-slate-200 text-[10px] font-semibold text-slate-700"
-                        >
-                          {member}
-                        </motion.span>
-                      ))}
+              {reports.length > 0 ? (
+                reports.map((report, index) => (
+                  <motion.article
+                    key={report.id}
+                    initial={{ opacity: 0, y: 18 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.35 }}
+                    transition={{ delay: index * 0.08, duration: 0.34 }}
+                    whileHover={{ y: -4 }}
+                    className="card p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-semibold text-slate-900">{report.title}</h2>
+                      <span className="text-xs text-slate-500">{report.status}</span>
                     </div>
-                    <Button variant="ghost" size="sm">Open</Button>
-                  </div>
-                </motion.article>
-              ))}
+                    <p className="mt-2 text-sm text-slate-600">
+                      {report.counts.insights} insights, {report.counts.faqs} FAQs, {report.counts.recommendations} recommendations
+                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="text-[11px] text-slate-500">
+                        Updated {new Date(report.updatedAt).toLocaleDateString()}
+                      </div>
+                      <Link to={`/doctor/reports/${report.id}`}>
+                        <Button variant="ghost" size="sm">Open</Button>
+                      </Link>
+                    </div>
+                  </motion.article>
+                ))
+              ) : (
+                <article className="card p-4">
+                  <p className="text-sm text-slate-600">
+                    {isLoading ? "Loading report rooms..." : "No report rooms available yet."}
+                  </p>
+                </article>
+              )}
             </div>
 
             <motion.article
@@ -85,11 +134,15 @@ export default function CollaborationWorkspace() {
                 transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-secondary/20 blur-3xl"
               />
-              <h3 className="text-lg font-semibold text-slate-900">AI chat workspace</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Latest analysis summary</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Unified chat threads are available for patient communication and team coordination.
+                {latestDetails?.report.aiSummary || "Upload and analyze a report to populate this summary."}
               </p>
-              <Button className="mt-4" variant="secondary">Open active chat threads</Button>
+              {latestDetails ? (
+                <Link to={`/reports/${latestDetails.report.id}`}>
+                  <Button className="mt-4" variant="secondary">Open full results</Button>
+                </Link>
+              ) : null}
             </motion.article>
           </div>
 
@@ -103,10 +156,13 @@ export default function CollaborationWorkspace() {
             >
               <h3 className="text-lg font-semibold text-slate-900">Recent activity</h3>
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>Dr. Vance updated Project Alpha (2h ago)</li>
-                <li>AI Agent posted a new team message (4h ago)</li>
-                <li>Dr. Miller commented on protocols (Yesterday)</li>
+                {reports.slice(0, 4).map((report) => (
+                  <li key={report.id}>
+                    {report.title} updated on {new Date(report.updatedAt).toLocaleString()}
+                  </li>
+                ))}
               </ul>
+              {reports.length === 0 ? <p className="mt-2 text-sm text-slate-500">No recent updates yet.</p> : null}
             </motion.article>
 
             <motion.article
@@ -116,13 +172,14 @@ export default function CollaborationWorkspace() {
               transition={{ delay: 0.05, duration: 0.36 }}
               className="card p-5"
             >
-              <h3 className="text-lg font-semibold text-slate-900">Team members</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Team status</h3>
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>Dr. Julian Vance - Lead Researcher</li>
-                <li>Dr. Alice Miller - Cardiologist</li>
-                <li>Dr. Marcus Chen - Neurologist</li>
-                <li>AI Research Agent - Online</li>
+                <li>Doctor pipeline access: active</li>
+                <li>Patient guidance pages: available</li>
+                <li>Report analysis service: operational</li>
+                <li>Total report rooms: {reports.length}</li>
               </ul>
+              {error ? <p className="mt-3 text-sm text-amber-700">{error}</p> : null}
             </motion.article>
           </aside>
         </section>

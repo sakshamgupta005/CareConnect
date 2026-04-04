@@ -14,20 +14,20 @@ export function ThemeToggle({ mode, onToggle, compact = false, className }: Them
   const isDark = mode === "dark";
   const sizeClasses = compact
     ? {
-        shell: "h-10 w-[100px]",
-        rowPadding: "px-1.5",
+        shell: "h-10 w-[60px]",
+        rowPadding: "px-1",
         rowText: "text-[10px]",
         icon: "h-3 w-3",
         knob: "h-7 w-7",
-        darkShift: "translate-x-[64px]",
+        darkShift: "translate-x-[38px]",
       }
     : {
-        shell: "h-11 w-[112px]",
-        rowPadding: "px-2",
+        shell: "h-11 w-[70px]",
+        rowPadding: "px-1",
         rowText: "text-[11px]",
         icon: "h-3.5 w-3.5",
         knob: "h-8 w-8",
-        darkShift: "translate-x-[72px]",
+        darkShift: "translate-x-[44px]",
       };
 
   return (
@@ -48,11 +48,9 @@ export function ThemeToggle({ mode, onToggle, compact = false, className }: Them
       <div className={cn("pointer-events-none z-10 flex w-full items-center justify-between font-semibold leading-none text-slate-600", sizeClasses.rowPadding, sizeClasses.rowText)}>
         <span className={`inline-flex items-center gap-0.5 transition-colors duration-300 ${!isDark ? "text-amber-600" : ""}`}>
           <Sun className={sizeClasses.icon} />
-          Day
         </span>
         <span className={`inline-flex items-center gap-0.5 transition-colors duration-300 ${isDark ? "text-teal-200" : ""}`}>
           <Moon className={sizeClasses.icon} />
-          Night
         </span>
       </div>
       <motion.span

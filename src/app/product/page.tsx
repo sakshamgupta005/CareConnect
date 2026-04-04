@@ -18,10 +18,10 @@ export default function ProductPage() {
             CareConnect focuses on patient report understanding and doctor team research workflow.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link to="/patient/reports/report_1">
+            <Link to="/patient">
               <Button>Open Patient Understanding</Button>
             </Link>
-            <Link to="/doctor/reports/report_1">
+            <Link to="/doctor">
               <Button variant="outline">Open Doctor Workspace</Button>
             </Link>
           </div>

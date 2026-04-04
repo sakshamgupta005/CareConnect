@@ -7,67 +7,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Doctor {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  patients  Patient[]
-  reports   Report[]
-}
-
-model Patient {
-  id        String    @id @default(uuid())
-  doctorId  String?
-  name      String
-  email     String?   @unique
-  createdAt DateTime  @default(now())
-  doctor    Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  reports   Report[]
-}
-
 model Report {
-  id              String           @id @default(uuid())
-  patientId       String?
-  doctorId        String?
+  id              String           @id @default(cuid())
   title           String
-  pdfUrl          String?
-  reportText      String?
-  summary         String?
+  fileName        String
+  fileType        String
+  rawText         String
+  aiSummary       String?
+  status          String           @default("uploaded")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor          Doctor?          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  findings        Finding[]
-  faqs            FAQ[]
+  insights        Insight[]
+  faqs            Faq[]
   recommendations Recommendation[]
 }
 
-model Finding {
-  id          String   @id @default(uuid())
+model Insight {
+  id          String   @id @default(cuid())
   reportId    String
-  name        String
-  value       String?
-  status      String?
-  explanation String?
+  type        String
+  label       String
+  value       String
+  status      String
 
   report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
 
-model FAQ {
-  id        String   @id @default(uuid())
+model Faq {
+  id        String   @id @default(cuid())
   reportId  String
   question  String
   answer    String
 
   report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
 
 model Recommendation {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   reportId  String
+  category  String
   text      String
 
   report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
 }
