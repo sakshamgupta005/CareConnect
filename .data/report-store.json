@@ -59,6 +59,18 @@
       "status": "uploaded",
       "createdAt": "2026-04-04T22:18:19.370Z",
       "updatedAt": "2026-04-04T22:18:19.370Z"
+    },
+    {
+      "id": "538fddfe-c010-4f7d-b026-f3915f3d08cf",
+      "title": "Patient Lab Report",
+      "fileName": "patient-report.txt",
+      "fileType": "text/plain",
+      "filePath": null,
+      "rawText": "Patient Name: es fe\nAge: 4\nGender: male\nBlood Group: O+\njkkk",
+      "aiSummary": null,
+      "status": "uploaded",
+      "createdAt": "2026-04-04T23:34:14.036Z",
+      "updatedAt": "2026-04-04T23:34:14.036Z"
     }
   ],
   "insights": [

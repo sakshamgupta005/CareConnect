@@ -4,10 +4,8 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci
-    startCommand: npm run dev -- --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/reports
+    startCommand: npm run start
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DISABLE_HMR
-        value: "true"
