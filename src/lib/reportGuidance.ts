@@ -1,3 +1,5 @@
+import { sanitizeReportAnalysis, type ReportAnalysis } from "./reportAnalysis";
+
 export type FAQItem = {
   id: string;
   question: string;
@@ -17,6 +19,11 @@ export type ReportRecord = {
   doctorName: string;
   reportTitle: string;
   uploadedFileName?: string;
+  uploadedFilePath?: string;
+  reportText?: string;
+  aiAnalysis?: ReportAnalysis;
+  analyzedAt?: number;
+  analysisError?: string;
   findings: string[];
   assignedFaqIds: string[];
   createdAt: number;
@@ -88,6 +95,7 @@ const DEFAULT_STATE: ReportGuidanceState = {
       doctorName: "Dr. Saksham Gupta",
       reportTitle: "Blood Test - March 2026",
       uploadedFileName: "blood-test-march-2026.txt",
+      uploadedFilePath: undefined,
       findings: ["anemia", "low vitamin d", "high cholesterol"],
       assignedFaqIds: ["faq_1", "faq_2"],
       createdAt: seedDate,
@@ -189,6 +197,7 @@ function cloneState(state: ReportGuidanceState): ReportGuidanceState {
     faqs: state.faqs.map((faq) => ({ ...faq, tags: [...faq.tags] })),
     reports: state.reports.map((report) => ({
       ...report,
+      aiAnalysis: report.aiAnalysis ? cloneReportAnalysis(report.aiAnalysis) : undefined,
       findings: [...report.findings],
       assignedFaqIds: [...report.assignedFaqIds],
     })),
@@ -238,11 +247,37 @@ function sanitizeReport(value: unknown): ReportRecord | null {
       typeof report.uploadedFileName === "string" && report.uploadedFileName.trim()
         ? report.uploadedFileName.trim()
         : undefined,
+    uploadedFilePath:
+      typeof report.uploadedFilePath === "string" && report.uploadedFilePath.trim()
+        ? report.uploadedFilePath.trim()
+        : undefined,
+    reportText:
+      typeof report.reportText === "string" && report.reportText.trim().length > 0
+        ? report.reportText.trim()
+        : undefined,
+    aiAnalysis:
+      report.aiAnalysis && typeof report.aiAnalysis === "object"
+        ? sanitizeReportAnalysis(report.aiAnalysis)
+        : undefined,
+    analyzedAt: typeof report.analyzedAt === "number" ? report.analyzedAt : undefined,
+    analysisError:
+      typeof report.analysisError === "string" && report.analysisError.trim()
+        ? report.analysisError.trim()
+        : undefined,
     findings: Array.isArray(report.findings) ? dedupeStringList(report.findings) : [],
     assignedFaqIds: Array.isArray(report.assignedFaqIds)
       ? report.assignedFaqIds.filter((faqId) => typeof faqId === "string" && faqId.trim().length > 0)
       : [],
     createdAt: typeof report.createdAt === "number" ? report.createdAt : Date.now(),
     updatedAt: typeof report.updatedAt === "number" ? report.updatedAt : Date.now(),
+  };
+}
+
+function cloneReportAnalysis(analysis: ReportAnalysis): ReportAnalysis {
+  return {
+    summary: analysis.summary,
+    keyFindings: analysis.keyFindings.map((finding) => ({ ...finding })),
+    faqs: analysis.faqs.map((faq) => ({ ...faq })),
+    recommendations: [...analysis.recommendations],
   };
 }

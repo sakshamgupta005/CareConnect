@@ -3,8 +3,11 @@ import { Link, useLocation } from "react-router-dom";
 import { Activity, Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "../ui/Button";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { cn } from "../../lib/utils";
 import { navLinks } from "../../data/mock";
+import { type AuthSession } from "../../lib/auth";
+import { type ThemeMode } from "../../lib/theme";
 
 const topNavItem = {
   hidden: { opacity: 0, y: -8 },
@@ -15,9 +18,19 @@ const topNavItem = {
   }),
 };
 
-export function Navbar() {
+type NavbarProps = {
+  session: AuthSession;
+  onLogout: () => void;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+};
+
+export function Navbar({ session, onLogout, themeMode, onToggleTheme }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const rolePortal = session.role === "doctor"
+    ? { name: "Doctor Portal", href: "/doctor" }
+    : { name: "Patient Portal", href: "/patient" };
 
   const closeMenu = () => setIsOpen(false);
 
@@ -57,47 +70,64 @@ export function Navbar() {
             </motion.div>
           ))}
           <motion.div custom={3} initial="hidden" animate="visible" variants={topNavItem}>
-            <Link to="/doctor" className="text-sm font-medium text-slate-600 hover:text-primary">
-              Doctor Portal
+            <Link to={rolePortal.href} className="text-sm font-medium text-slate-600 hover:text-primary">
+              {rolePortal.name}
             </Link>
           </motion.div>
           <motion.div custom={4} initial="hidden" animate="visible" variants={topNavItem}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+              <span className="font-semibold text-slate-800">{session.username}</span>
+              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
+                {session.role}
+              </span>
+            </div>
+          </motion.div>
+          <motion.div custom={5} initial="hidden" animate="visible" variants={topNavItem}>
+            <Button size="sm" variant="outline" onClick={onLogout}>Logout</Button>
+          </motion.div>
+          <motion.div custom={6} initial="hidden" animate="visible" variants={topNavItem}>
             <Link to="/contact">
               <Button size="sm">Request Demo</Button>
             </Link>
           </motion.div>
+          <motion.div custom={7} initial="hidden" animate="visible" variants={topNavItem}>
+            <ThemeToggle mode={themeMode} onToggle={onToggleTheme} compact />
+          </motion.div>
         </nav>
 
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          className="inline-flex items-center justify-center rounded-lg p-2 text-slate-700 hover:bg-slate-100 md:hidden"
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-label="Toggle navigation"
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            {isOpen ? (
-              <motion.span
-                key="close"
-                initial={{ rotate: -60, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 60, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <X className="h-5 w-5" />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="menu"
-                initial={{ rotate: 60, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -60, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Menu className="h-5 w-5" />
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle mode={themeMode} onToggle={onToggleTheme} compact />
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-700 hover:bg-slate-100"
+            onClick={() => setIsOpen((prev) => !prev)}
+            aria-label="Toggle navigation"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {isOpen ? (
+                <motion.span
+                  key="close"
+                  initial={{ rotate: -60, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 60, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <X className="h-5 w-5" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="menu"
+                  initial={{ rotate: 60, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -60, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Menu className="h-5 w-5" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -133,14 +163,30 @@ export function Navbar() {
               ))}
               <motion.div initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.16, duration: 0.22 }}>
                 <Link
-                  to="/doctor"
+                  to={rolePortal.href}
                   className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   onClick={closeMenu}
                 >
-                  Doctor Portal
+                  {rolePortal.name}
                 </Link>
               </motion.div>
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.24 }}>
+              <motion.div initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18, duration: 0.22 }}>
+                <div className="mx-1 mt-1 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+                  <span className="font-semibold text-slate-800">{session.username}</span>
+                  <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
+                    {session.role}
+                  </span>
+                </div>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.22 }}>
+                <Button variant="outline" className="w-full" onClick={() => {
+                  closeMenu();
+                  onLogout();
+                }}>
+                  Logout
+                </Button>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24, duration: 0.24 }}>
                 <Link to="/contact" onClick={closeMenu} className="block pt-2">
                   <Button className="w-full">Request Demo</Button>
                 </Link>

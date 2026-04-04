@@ -100,7 +100,6 @@ export default function ContactPage() {
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-4"
         >
-          <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">Contact Us</p>
           <h1 className="text-3xl font-bold text-primary sm:text-4xl">We are here to help</h1>
           <p className="max-w-3xl text-slate-600">
             Reach out for a demo, integration planning, or onboarding support.
@@ -130,9 +129,10 @@ export default function ContactPage() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.08 + index * 0.06, duration: 0.28 }}
                   whileHover={{ x: 3 }}
-                  className="flex items-center gap-3.5"
+                  className="flex items-start gap-3.5 leading-relaxed"
                 >
-                  <item.icon className="h-4 w-4 text-secondary" /> {item.text}
+                  <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
+                  <span className="break-words">{item.text}</span>
                 </motion.p>
               ))}
             </div>
@@ -314,7 +314,7 @@ export default function ContactPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
                   <p className="font-semibold text-slate-800">QR and website link text</p>
-                  <p className="mt-2 leading-relaxed">{getQrLinkText()}</p>
+                  <p className="mt-2 whitespace-pre-line leading-relaxed">{getQrLinkText()}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
                   <p className="font-semibold text-slate-800">Automatic message text</p>

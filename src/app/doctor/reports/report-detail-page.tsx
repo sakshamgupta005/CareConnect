@@ -1,6 +1,6 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, CheckCircle2, UploadCloud } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, LoaderCircle, UploadCloud, X } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import {
   AssignFAQPanel,
@@ -10,6 +10,7 @@ import {
 } from "../../../components/report-guidance";
 import { Button } from "../../../components/ui/Button";
 import {
+  dedupeStringList,
   formatTagLabel,
   getAssignedFaqs,
   getReportById,
@@ -19,6 +20,8 @@ import {
   type ReportGuidanceState,
   type ReportRecord,
 } from "../../../lib/reportGuidance";
+import { deleteUploadedPdfFromServer, uploadPdfToServer } from "../../../lib/pdfUploadApi";
+import { analyzeReportText } from "../../../lib/reportAnalysisApi";
 
 type FocusSection = "upload" | "assign" | null;
 
@@ -30,6 +33,12 @@ export default function DoctorReportDetailsPage() {
   const [isReady, setIsReady] = useState(false);
   const [focusSection, setFocusSection] = useState<FocusSection>(null);
   const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
+  const [selectedUploadPreviewUrl, setSelectedUploadPreviewUrl] = useState("");
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [analysisState, setAnalysisState] = useState<"idle" | "analyzing" | "success" | "error">("idle");
+  const [analysisMessage, setAnalysisMessage] = useState("");
 
   useEffect(() => {
     setState(loadReportGuidanceState());
@@ -73,6 +82,20 @@ export default function DoctorReportDetailsPage() {
     };
   }, [location.hash]);
 
+  useEffect(() => {
+    if (!selectedUploadFile) {
+      setSelectedUploadPreviewUrl("");
+      return;
+    }
+
+    const url = URL.createObjectURL(selectedUploadFile);
+    setSelectedUploadPreviewUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [selectedUploadFile]);
+
   const assignedFaqs = useMemo(() => {
     if (!draftReport) return [];
     return getAssignedFaqs(draftReport, state.faqs);
@@ -106,16 +129,154 @@ export default function DoctorReportDetailsPage() {
   }, [draftReport, assignedFaqs]);
   const libraryUtilization = state.faqs.length > 0 ? Math.round((assignedFaqs.length / state.faqs.length) * 100) : 0;
 
-  const handleReportUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !draftReport) return;
+  const persistUpdatedReport = (updatedReport: ReportRecord) => {
+    setDraftReport(updatedReport);
+    setState((previousState) => {
+      const nextState: ReportGuidanceState = {
+        ...previousState,
+        reports: previousState.reports.map((report) => (report.id === updatedReport.id ? updatedReport : report)),
+      };
 
-    setDraftReport({
-      ...draftReport,
-      uploadedFileName: file.name,
+      if (isReady) {
+        saveReportGuidanceState(nextState);
+      }
+
+      return nextState;
     });
+  };
 
+  const runReportAnalysis = async (reportText: string, baseReport: ReportRecord) => {
+    setAnalysisState("analyzing");
+    setAnalysisMessage("Analyzing your report...");
+
+    try {
+      const analysis = await analyzeReportText(reportText);
+      const extractedFindings = dedupeStringList(
+        analysis.keyFindings.map((finding) => normalizeTag(finding.name)).filter(Boolean),
+      );
+
+      const updatedReport: ReportRecord = {
+        ...baseReport,
+        reportText,
+        aiAnalysis: analysis,
+        analyzedAt: Date.now(),
+        analysisError: undefined,
+        findings: extractedFindings.length > 0 ? extractedFindings : baseReport.findings,
+        updatedAt: Date.now(),
+      };
+
+      persistUpdatedReport(updatedReport);
+      setAnalysisState("success");
+      setAnalysisMessage("Report analysis is ready.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Report analysis failed.";
+      const updatedReport: ReportRecord = {
+        ...baseReport,
+        reportText,
+        aiAnalysis: undefined,
+        analyzedAt: undefined,
+        analysisError: message,
+        updatedAt: Date.now(),
+      };
+
+      persistUpdatedReport(updatedReport);
+      setAnalysisState("error");
+      setAnalysisMessage(message);
+    }
+  };
+
+  const handleReportUploadSelection = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setSelectedUploadFile(file);
+    setUploadState("idle");
+    setUploadMessage("");
+    setAnalysisState("idle");
+    setAnalysisMessage("");
     event.target.value = "";
+  };
+
+  const handleUploadPdf = async () => {
+    if (!selectedUploadFile || !draftReport) return;
+
+    setUploadState("uploading");
+    setUploadMessage("");
+    setAnalysisState("idle");
+    setAnalysisMessage("");
+
+    try {
+      const uploaded = await uploadPdfToServer(selectedUploadFile);
+      const uploadedReport: ReportRecord = {
+        ...draftReport,
+        uploadedFileName: uploaded.originalFileName,
+        uploadedFilePath: uploaded.filePath,
+        reportText: uploaded.reportText,
+        aiAnalysis: undefined,
+        analyzedAt: undefined,
+        analysisError: undefined,
+        updatedAt: Date.now(),
+      };
+
+      persistUpdatedReport(uploadedReport);
+
+      setSelectedUploadFile(null);
+      setUploadState("success");
+      setUploadMessage("PDF uploaded successfully.");
+
+      await runReportAnalysis(uploaded.reportText, uploadedReport);
+    } catch (error) {
+      setUploadState("error");
+      setUploadMessage(error instanceof Error ? error.message : "Upload failed. Please try again.");
+    }
+  };
+
+  const handleAnalyzeExistingReport = async () => {
+    if (!draftReport?.reportText || analysisState === "analyzing") {
+      return;
+    }
+
+    await runReportAnalysis(draftReport.reportText, draftReport);
+  };
+
+  const handleClearSelectedUpload = () => {
+    setSelectedUploadFile(null);
+  };
+
+  const handleRemoveUploadedFile = async () => {
+    if (!draftReport || (!draftReport.uploadedFileName && !draftReport.uploadedFilePath)) {
+      return;
+    }
+
+    setUploadState("uploading");
+    setUploadMessage("");
+
+    try {
+      if (draftReport.uploadedFilePath) {
+        await deleteUploadedPdfFromServer(draftReport.uploadedFilePath);
+      }
+
+      const updatedReport: ReportRecord = {
+        ...draftReport,
+        uploadedFileName: undefined,
+        uploadedFilePath: undefined,
+        reportText: undefined,
+        aiAnalysis: undefined,
+        analyzedAt: undefined,
+        analysisError: undefined,
+        updatedAt: Date.now(),
+      };
+
+      persistUpdatedReport(updatedReport);
+
+      setUploadState("success");
+      setUploadMessage("Uploaded PDF removed.");
+      setAnalysisState("idle");
+      setAnalysisMessage("");
+    } catch (error) {
+      setUploadState("error");
+      setUploadMessage(error instanceof Error ? error.message : "Failed to remove uploaded PDF.");
+    }
   };
 
   const handleSaveChanges = () => {
@@ -266,22 +427,139 @@ export default function DoctorReportDetailsPage() {
         >
           <h2 className="text-lg font-semibold text-slate-900">Report Upload</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Upload a report file name placeholder for this workflow. You can replace it anytime.
+            Upload a PDF file for this report. The file is sent to backend and stored in local uploads.
           </p>
 
           <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 hover:bg-slate-100">
             <UploadCloud className="h-5 w-5 text-secondary" />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800">Upload report file</p>
-              <p className="text-xs text-slate-500">Accepted for placeholder: .txt, .md, .csv, .pdf</p>
+              <p className="text-sm font-medium text-slate-800">Select PDF file</p>
+              <p className="text-xs text-slate-500">Accepted format: .pdf (max 12 MB)</p>
             </div>
-            <input type="file" accept=".txt,.md,.csv,.pdf" onChange={handleReportUpload} className="hidden" />
+            <input type="file" accept=".pdf,application/pdf" onChange={handleReportUploadSelection} className="hidden" />
           </label>
 
-          <p className="mt-3 text-sm text-slate-600">
-            Current file:{" "}
-            <span className="font-medium text-slate-900">{draftReport.uploadedFileName || "No file uploaded yet"}</span>
-          </p>
+          <div className="mt-3 space-y-2">
+            {selectedUploadFile ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  {selectedUploadPreviewUrl ? (
+                    <a
+                      href={selectedUploadPreviewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate font-medium hover:underline"
+                    >
+                      Selected: {selectedUploadFile.name}
+                    </a>
+                  ) : (
+                    <span className="truncate font-medium">Selected: {selectedUploadFile.name}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearSelectedUpload}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Remove selected file"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : null}
+
+            {draftReport.uploadedFileName ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
+                  {draftReport.uploadedFilePath ? (
+                    <a
+                      href={draftReport.uploadedFilePath}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate font-medium hover:underline"
+                    >
+                      Uploaded: {draftReport.uploadedFileName}
+                    </a>
+                  ) : (
+                    <span className="truncate font-medium">Uploaded: {draftReport.uploadedFileName}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveUploadedFile}
+                  disabled={uploadState === "uploading"}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label="Remove uploaded file"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">No uploaded file yet.</p>
+            )}
+            {draftReport.uploadedFileName && !draftReport.uploadedFilePath ? (
+              <p className="text-[11px] text-amber-700">
+                Re-upload this PDF once to enable open-on-click for this older entry.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onClick={handleUploadPdf}
+              disabled={!selectedUploadFile || uploadState === "uploading" || analysisState === "analyzing"}
+            >
+              {uploadState === "uploading" ? "Uploading..." : "Upload PDF"}
+            </Button>
+            {!selectedUploadFile && draftReport.reportText && (!draftReport.aiAnalysis || draftReport.analysisError) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAnalyzeExistingReport}
+                disabled={analysisState === "analyzing"}
+              >
+                Re-analyze report
+              </Button>
+            ) : null}
+          </div>
+
+          {uploadMessage ? (
+            <p className={`mt-3 text-sm ${uploadState === "error" ? "text-red-600" : "text-emerald-700"}`}>
+              {uploadMessage}
+            </p>
+          ) : null}
+
+          {analysisState === "analyzing" ? (
+            <p className="mt-2 inline-flex items-center gap-2 text-sm text-secondary">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Analyzing your report...
+            </p>
+          ) : null}
+
+          {analysisState !== "analyzing" && analysisMessage ? (
+            <p className={`mt-2 text-sm ${analysisState === "error" ? "text-red-600" : "text-secondary"}`}>
+              {analysisMessage}
+            </p>
+          ) : null}
+
+          {draftReport.aiAnalysis ? (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Latest AI Summary</p>
+              <p className="mt-1 text-sm text-slate-700">{draftReport.aiAnalysis.summary}</p>
+              <p className="mt-2 text-xs text-slate-500">
+                {draftReport.aiAnalysis.keyFindings.length} findings, {draftReport.aiAnalysis.faqs.length} FAQs,{" "}
+                {draftReport.aiAnalysis.recommendations.length} recommendations generated.
+              </p>
+            </div>
+          ) : null}
+
+          {draftReport.analysisError ? (
+            <p className="mt-2 text-xs text-amber-700">
+              Analysis error: {draftReport.analysisError}
+            </p>
+          ) : null}
         </motion.section>
 
         <ReportFindingsEditor

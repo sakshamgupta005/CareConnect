@@ -13,9 +13,6 @@ export default function ProductPage() {
           transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-4"
         >
-          <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
-            Product Overview
-          </p>
           <h1 className="text-3xl font-bold text-primary sm:text-4xl">Two services we provide</h1>
           <p className="max-w-3xl text-slate-600">
             CareConnect focuses on patient report understanding and doctor team research workflow.

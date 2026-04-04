@@ -24,7 +24,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const hoverByVariant = {
       primary: { y: -1.5, scale: 1.01, boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)" },
-      secondary: { y: -1.5, scale: 1.01, boxShadow: "0 10px 24px rgba(0, 106, 97, 0.2)" },
+      secondary: { y: -1.5, scale: 1.01, boxShadow: "0 10px 24px rgba(3, 105, 161, 0.26)" },
       outline: { y: -1.5, scale: 1.005 },
       ghost: { y: -1, scale: 1.005 },
     } as const;

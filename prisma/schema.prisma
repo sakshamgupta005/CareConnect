@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  patients  Patient[]
+  reports   Report[]
+}
+
+model Patient {
+  id        String    @id @default(uuid())
+  doctorId  String?
+  name      String
+  email     String?   @unique
+  createdAt DateTime  @default(now())
+  doctor    Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  reports   Report[]
+}
+
+model Report {
+  id              String           @id @default(uuid())
+  patientId       String?
+  doctorId        String?
+  title           String
+  pdfUrl          String?
+  reportText      String?
+  summary         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  patient         Patient?         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor          Doctor?          @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  findings        Finding[]
+  faqs            FAQ[]
+  recommendations Recommendation[]
+}
+
+model Finding {
+  id          String   @id @default(uuid())
+  reportId    String
+  name        String
+  value       String?
+  status      String?
+  explanation String?
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  reportId  String
+  question  String
+  answer    String
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Recommendation {
+  id        String   @id @default(uuid())
+  reportId  String
+  text      String
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}

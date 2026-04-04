@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Upload,
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { faqs, stats } from "../data/mock";
+import { cn } from "../lib/utils";
 
 export default function LandingPage() {
   return (
@@ -16,9 +17,6 @@ export default function LandingPage() {
             transition={{ duration: 0.45 }}
             className="space-y-5 text-center"
           >
-            <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
-              FAQ Recommendation Platform
-            </p>
             <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">CareConnect AI</h1>
             <p className="mx-auto max-w-4xl text-base text-slate-600 sm:text-lg">
               Doctors upload reports, curate findings, and assign explanation FAQs. Patients then open a clean guidance page to understand their report clearly.
@@ -40,25 +38,28 @@ export default function LandingPage() {
 
           <div className="grid gap-5 md:grid-cols-3">
             <WorkflowCard
-              icon={<Upload className="h-5 w-5 text-secondary" />}
+              icon={<Upload className="h-5 w-5 text-sky-700" />}
               title="Doctor Uploads Report"
               description="The doctor uploads a text-based report file from the dashboard."
               delay={0}
               to="/doctor/reports/report_1#report-upload"
+              tone="sky"
             />
             <WorkflowCard
-              icon={<MessageSquare className="h-5 w-5 text-secondary" />}
+              icon={<MessageSquare className="h-5 w-5 text-violet-700" />}
               title="Doctor Adds FAQ Questions"
               description="The doctor adds recommended FAQ questions for the patient."
               delay={0.06}
               to="/doctor/faqs#faq-form"
+              tone="violet"
             />
             <WorkflowCard
-              icon={<FileText className="h-5 w-5 text-secondary" />}
+              icon={<FileText className="h-5 w-5 text-indigo-700" />}
               title="Patient Gets Explanation"
               description="The patient clicks a question and sees report-based explanation instantly."
               delay={0.12}
               to="/patient/reports/report_1#recommended-faqs"
+              tone="teal"
             />
           </div>
         </div>
@@ -94,22 +95,25 @@ export default function LandingPage() {
             <h2 className="text-xl font-semibold text-slate-900">What you can do today</h2>
             <div className="mt-5 space-y-4">
               <FeatureRow
-                icon={<Users className="h-5 w-5 text-secondary" />}
+                icon={<Users className="h-5 w-5 text-indigo-700" />}
                 title="Doctor Workflow"
                 description="Upload reports, define findings, and assign reusable explanations."
                 to="/doctor/reports/report_1"
+                tone="teal"
               />
               <FeatureRow
-                icon={<FileText className="h-5 w-5 text-secondary" />}
+                icon={<FileText className="h-5 w-5 text-sky-700" />}
                 title="Patient Workflow"
                 description="Open your report page and read doctor-selected explanations."
                 to="/patient/reports/report_1"
+                tone="sky"
               />
               <FeatureRow
-                icon={<ShieldCheck className="h-5 w-5 text-secondary" />}
+                icon={<ShieldCheck className="h-5 w-5 text-amber-700" />}
                 title="Trust and Compliance"
                 description="Privacy and security controls around every FAQ workflow."
                 to="/trust-and-compliance"
+                tone="amber"
               />
             </div>
           </motion.div>
@@ -208,13 +212,22 @@ function WorkflowCard({
   description,
   delay,
   to,
+  tone,
 }: {
   icon: ReactNode;
   title: string;
   description: string;
   delay: number;
   to: string;
+  tone: "teal" | "sky" | "violet" | "amber";
 }) {
+  const toneClassName = {
+    teal: "accent-card-teal",
+    sky: "accent-card-sky",
+    violet: "accent-card-violet",
+    amber: "accent-card-amber",
+  }[tone];
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 14 }}
@@ -222,16 +235,18 @@ function WorkflowCard({
       viewport={{ once: true, amount: 0.3 }}
       transition={{ delay, duration: 0.32 }}
       whileHover={{ y: -2 }}
-      className="card p-5"
+      className={cn("card p-5", toneClassName)}
     >
       <Link
         to={to}
-        className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30"
+        className="flex h-full flex-col rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30"
       >
-        <div className="inline-flex rounded-lg bg-secondary/10 p-2">{icon}</div>
+        <div className="inline-flex rounded-lg bg-white/70 p-2">{icon}</div>
         <h3 className="mt-3 text-base font-semibold text-slate-900">{title}</h3>
-        <p className="mt-1 text-sm text-slate-600">{description}</p>
-        <p className="mt-3 text-xs font-semibold text-secondary">Open this workflow</p>
+        <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">{description}</p>
+        <span className="mt-3 inline-flex items-center rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-xs font-semibold text-secondary">
+          Show workflow
+        </span>
       </Link>
     </motion.article>
   );
@@ -242,24 +257,39 @@ function FeatureRow({
   title,
   description,
   to,
+  tone,
 }: {
   icon: ReactNode;
   title: string;
   description: string;
   to: string;
+  tone: "teal" | "sky" | "violet" | "amber";
 }) {
+  const toneClassName = {
+    teal: "accent-card-teal",
+    sky: "accent-card-sky",
+    violet: "accent-card-violet",
+    amber: "accent-card-amber",
+  }[tone];
+
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 330, damping: 22 }}>
       <Link
         to={to}
-        className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white/80 p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+        className={cn(
+          "flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-secondary/30",
+          toneClassName,
+        )}
       >
         <motion.div whileHover={{ rotate: -8, scale: 1.08 }} transition={{ type: "spring", stiffness: 320, damping: 16 }} className="mt-0.5">
           {icon}
         </motion.div>
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">{description}</p>
+          <span className="mt-2 inline-flex items-center rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-[11px] font-semibold text-secondary">
+            Show details
+          </span>
         </div>
       </Link>
     </motion.div>

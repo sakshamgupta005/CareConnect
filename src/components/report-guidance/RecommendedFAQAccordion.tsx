@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
-import { type FAQItem } from "../../lib/reportGuidance";
+
+export type RecommendedFaqItem = {
+  id: string;
+  question: string;
+  answer: string;
+};
 
 type RecommendedFAQAccordionProps = {
-  items: FAQItem[];
+  items: RecommendedFaqItem[];
 };
 
 export function RecommendedFAQAccordion({ items }: RecommendedFAQAccordionProps) {

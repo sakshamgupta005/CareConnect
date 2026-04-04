@@ -29,7 +29,6 @@ export default function AboutPage() {
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-4"
         >
-          <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">About CareConnect AI</p>
           <h1 className="text-3xl font-bold text-primary sm:text-4xl">Built around AI chat for healthcare communication</h1>
           <p className="max-w-3xl text-slate-600">
             CareConnect AI is a communication-first project with dedicated chat spaces for patients and care teams.
