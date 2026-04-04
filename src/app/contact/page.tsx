@@ -49,7 +49,7 @@ export default function ContactPage() {
               <ContactInfoItem 
                 icon={<Mail />} 
                 title="Email Us" 
-                description="hello@medibridge.ai" 
+                description="hello@careconnect.ai" 
               />
               <ContactInfoItem 
                 icon={<Phone />} 

@@ -6,7 +6,7 @@ export const navLinks = [
 
 export const faqs = [
   {
-    question: "Is MediBridge AI clinically validated?",
+    question: "Is CareConnect AI clinically validated?",
     answer: "Yes, our models are trained on curated clinical datasets and reviewed by a board of medical professionals to ensure accuracy and empathy in every interaction."
   },
   {
@@ -72,3 +72,4 @@ export const chatResponses = {
     simple: "अपने दिल को पानी के पाइप वाले घर की तरह समझें। 'मायोकार्डियल इंफार्क्शन' उन पाइपों में से एक में अस्थायी रुकावट की तरह है जिसे ठीक करने की आवश्यकता है।"
   }
 };
+

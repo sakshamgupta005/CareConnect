@@ -142,7 +142,7 @@ export default function DoctorDashboard() {
               </div>
               <h3 className="text-2xl font-headline font-bold mb-4">AI Research Synthesis</h3>
               <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                MediBridge AI is currently synthesizing 14 new papers relevant to your ongoing neuroplasticity project. A summary will be ready by morning.
+                CareConnect AI is currently synthesizing 14 new papers relevant to your ongoing neuroplasticity project. A summary will be ready by morning.
               </p>
             </div>
             <Button variant="secondary" className="w-full" onClick={() => (window.location.href = "/doctor/collaboration")}>
@@ -188,3 +188,4 @@ function Zap({ className }: { className?: string }) {
     </svg>
   );
 }
+

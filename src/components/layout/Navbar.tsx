@@ -30,7 +30,7 @@ export function Navbar() {
             <Activity className="text-white w-6 h-6" />
           </div>
           <span className="text-xl font-black font-headline tracking-tighter text-primary">
-            MediBridge AI
+            CareConnect AI
           </span>
         </Link>
 
@@ -102,3 +102,4 @@ export function Navbar() {
     </header>
   );
 }
+

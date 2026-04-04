@@ -23,7 +23,7 @@ export default function ProductPage() {
             One Platform, <span className="text-secondary">Infinite Care</span>
           </h1>
           <p className="text-lg lg:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto mb-12">
-            MediBridge AI is a dual-module ecosystem designed to solve the most critical communication challenges in modern healthcare.
+            CareConnect AI is a dual-module ecosystem designed to solve the most critical communication challenges in modern healthcare.
           </p>
           <div className="flex justify-center gap-4">
             <Button size="lg" onClick={() => (window.location.href = "/contact")}>Request Demo</Button>
@@ -160,3 +160,4 @@ function FeatureItem({ icon, title, description, dark = false }: { icon: React.R
     </div>
   );
 }
+

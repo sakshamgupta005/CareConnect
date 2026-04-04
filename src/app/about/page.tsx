@@ -21,7 +21,7 @@ export default function AboutPage() {
             Bridging the Gap Between <span className="text-secondary">Knowledge</span> and Understanding
           </h1>
           <p className="text-lg lg:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto mb-12">
-            MediBridge AI was founded with a single goal: to ensure that no patient ever feels lost in their care journey and no doctor ever feels isolated in their research.
+            CareConnect AI was founded with a single goal: to ensure that no patient ever feels lost in their care journey and no doctor ever feels isolated in their research.
           </p>
         </div>
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary/5 via-transparent to-transparent opacity-50" />
@@ -53,9 +53,9 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-24 items-center">
           <div className="space-y-12">
             <div className="space-y-6">
-              <h2 className="text-4xl lg:text-5xl font-headline font-bold text-primary">The MediBridge Story</h2>
+              <h2 className="text-4xl lg:text-5xl font-headline font-bold text-primary">The CareConnect Story</h2>
               <p className="text-lg text-slate-500 leading-relaxed">
-                Born from the frontlines of clinical practice, MediBridge AI was created by doctors and engineers who saw firsthand the friction in medical communication.
+                Born from the frontlines of clinical practice, CareConnect AI was created by doctors and engineers who saw firsthand the friction in medical communication.
               </p>
             </div>
 
@@ -108,7 +108,7 @@ export default function AboutPage() {
         <div className="max-w-3xl mx-auto text-center space-y-12">
           <h2 className="text-4xl font-headline font-bold">Trust & Compliance</h2>
           <p className="text-lg text-slate-500 leading-relaxed">
-            We take our responsibility seriously. MediBridge AI is built on a foundation of security, privacy, and clinical integrity.
+            We take our responsibility seriously. CareConnect AI is built on a foundation of security, privacy, and clinical integrity.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm">
@@ -145,3 +145,4 @@ function ValueCard({ icon, title, description }: { icon: React.ReactNode; title:
     </div>
   );
 }
+

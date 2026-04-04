@@ -77,7 +77,7 @@ export default function CollaborationWorkspace() {
                   <h2 className="text-2xl font-headline font-bold">AI Research Synthesis</h2>
                 </div>
                 <p className="text-slate-400 text-lg leading-relaxed max-w-2xl">
-                  MediBridge AI is currently synthesizing 14 new papers relevant to your ongoing neuroplasticity project. A summary will be ready by morning.
+                  CareConnect AI is currently synthesizing 14 new papers relevant to your ongoing neuroplasticity project. A summary will be ready by morning.
                 </p>
                 <div className="flex gap-4">
                   <Button variant="secondary" size="md">View Synthesis Progress</Button>
@@ -173,3 +173,4 @@ function TeamMember({ name, role, online = false, highlight = false }: { name: s
     </div>
   );
 }
+

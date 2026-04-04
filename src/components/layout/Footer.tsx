@@ -11,7 +11,7 @@ export function Footer() {
               <Activity className="text-white w-6 h-6" />
             </div>
             <span className="text-xl font-black font-headline tracking-tighter text-primary">
-              MediBridge AI
+              CareConnect AI
             </span>
           </Link>
           <p className="text-slate-500 leading-relaxed max-w-xs">
@@ -53,7 +53,7 @@ export function Footer() {
         <div className="md:col-span-4 space-y-6">
           <h4 className="font-bold text-slate-900">Medical Disclaimer</h4>
           <p className="text-slate-400 text-xs leading-loose uppercase tracking-tighter">
-            MediBridge AI provides clinical support and information for educational purposes only. Always consult with a qualified healthcare professional for medical advice, diagnosis, or treatment.
+            CareConnect AI provides clinical support and information for educational purposes only. Always consult with a qualified healthcare professional for medical advice, diagnosis, or treatment.
           </p>
           <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Compliance</p>
@@ -68,7 +68,7 @@ export function Footer() {
 
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 border-t border-slate-200/50 pt-12">
         <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">
-          © 2024 MediBridge AI. Clinical Decision Support System.
+          © 2024 CareConnect AI. Clinical Decision Support System.
         </p>
         <div className="flex gap-8 text-xs text-slate-400 font-medium uppercase tracking-widest">
           <Link to="#" className="hover:text-secondary transition-colors">Privacy Policy</Link>
@@ -79,3 +79,4 @@ export function Footer() {
     </footer>
   );
 }
+

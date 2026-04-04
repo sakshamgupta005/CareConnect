@@ -73,7 +73,7 @@ export default function PatientDashboard() {
               <MessageSquare className="text-secondary w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">MediBridge AI Assistant</h3>
+              <h3 className="font-bold text-slate-900">CareConnect AI Assistant</h3>
               <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest">Always Online</p>
             </div>
           </div>
@@ -172,3 +172,4 @@ function CarePlanItem({ icon, label, status, highlight = false }: { icon: React.
     </div>
   );
 }
+
