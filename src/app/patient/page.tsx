@@ -1,188 +1,183 @@
-import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { Languages, MessageSquare, Send, Sparkles, User } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
+import { ArrowRight, BookOpenCheck, FileText, TrendingUp, UserRound } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
-import { chatResponses } from "../../data/mock";
-import { cn } from "../../lib/utils";
-
-type Language = "english" | "hindi";
-type ChatMessage = { role: "ai" | "user"; text: string };
+import { loadReportGuidanceState, type ReportGuidanceState } from "../../lib/reportGuidance";
 
 export default function PatientDashboard() {
-  const [language, setLanguage] = useState<Language>("english");
-  const [simpleMode, setSimpleMode] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "ai",
-      text: "Hello Eleanor. Welcome to your CareConnect AI chat space. What would you like to discuss?",
-    },
-  ]);
+  const location = useLocation();
+  const [state, setState] = useState<ReportGuidanceState>({ faqs: [], reports: [] });
+  const [isFocused, setIsFocused] = useState(false);
 
-  const handleSendMessage = () => {
-    const text = inputValue.trim();
-    if (!text) return;
+  useEffect(() => {
+    setState(loadReportGuidanceState());
+  }, []);
 
-    const next = [...messages, { role: "user", text } as ChatMessage];
-    setMessages(next);
-    setInputValue("");
+  useEffect(() => {
+    if (location.hash !== "#patient-report-explanation") {
+      setIsFocused(false);
+      return;
+    }
 
-    const response = simpleMode ? chatResponses[language].simple : chatResponses[language].normal;
+    setIsFocused(true);
+    const timer = window.setTimeout(() => setIsFocused(false), 2100);
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById("patient-report-explanation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 70);
 
-    window.setTimeout(() => {
-      setMessages([...next, { role: "ai", text: response }]);
-    }, 400);
-  };
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(scrollTimer);
+    };
+  }, [location.hash]);
+
+  const patientPulse = useMemo(() => {
+    const totalReports = state.reports.length;
+    const totalFindings = state.reports.reduce((count, report) => count + report.findings.length, 0);
+    const totalAssigned = state.reports.reduce((count, report) => count + report.assignedFaqIds.length, 0);
+    const understandingScore = totalFindings > 0 ? Math.min(100, Math.round((totalAssigned / totalFindings) * 100)) : 0;
+
+    return { totalReports, totalFindings, totalAssigned, understandingScore };
+  }, [state.reports]);
 
   return (
-    <div className="bg-slate-50 py-8 sm:py-10">
-      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[280px_1fr]">
-        <motion.aside
-          initial={{ opacity: 0, x: -24 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-          className="card p-5"
+    <div className="bg-slate-50 py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 sm:px-6">
+        <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+          <h1 className="text-2xl font-bold text-primary sm:text-3xl">Patient Dashboard</h1>
+          <p className="text-sm text-slate-600">
+            View doctor-curated report explanations in a clear and easy-to-understand format.
+          </p>
+        </motion.header>
+
+        <motion.section
+          id="patient-report-explanation"
+          className={`card-patient scroll-mt-24 p-6 transition-all duration-700 sm:p-8 ${
+            isFocused
+              ? "ring-2 ring-secondary/40 ring-offset-2 ring-offset-slate-50 shadow-[0_20px_50px_rgba(0,106,97,0.18)]"
+              : ""
+          }`}
+          animate={isFocused ? { scale: [1, 1.01, 1], y: [0, -3, 0] } : { scale: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h1 className="text-lg font-semibold text-slate-900">Patient Profile</h1>
-          <div className="mt-4 space-y-2 text-sm text-slate-600">
-            <p><span className="font-medium text-slate-900">Name:</span> Eleanor Rigby</p>
-            <p><span className="font-medium text-slate-900">Patient ID:</span> ER-9021</p>
-            <p><span className="font-medium text-slate-900">Chat Space:</span> Patient Communication</p>
-          </div>
-
-          <motion.div
-            whileHover={{ y: -2, scale: 1.01 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600"
-          >
-            <p className="font-semibold text-slate-900">Chat Focus</p>
-            <p className="mt-1">Use this space for clear patient questions and straightforward answers.</p>
-          </motion.div>
-        </motion.aside>
-
-        <motion.main
-          initial={{ opacity: 0, x: 24 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1], delay: 0.03 }}
-          className="card relative flex min-h-[500px] flex-col overflow-hidden"
-        >
-          <motion.div
-            animate={{ scale: [1, 1.08, 1], opacity: [0.18, 0.3, 0.18] }}
-            transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-secondary/20 blur-3xl"
-          />
-
-          <header className="relative flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
-            <div className="flex items-center gap-2">
-              <motion.div whileHover={{ rotate: -8, scale: 1.06 }} className="rounded-lg bg-secondary/10 p-2">
-                <MessageSquare className="h-5 w-5 text-secondary" />
-              </motion.div>
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">CareConnect AI Assistant</h2>
-                <p className="text-xs text-slate-500">Always available</p>
-              </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+                Understand Your Report
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-900">Recommended Explanations</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Open your report guidance page to read explanations selected by your doctor.
+              </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <motion.div whileHover={{ y: -1 }} className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white p-1">
-                <Languages className="ml-1 h-4 w-4 text-slate-500" />
-                <button
-                  onClick={() => setLanguage("english")}
-                  className={cn(
-                    "rounded px-2 py-1 text-xs",
-                    language === "english" ? "bg-slate-100 text-slate-900" : "text-slate-600",
-                  )}
-                >
-                  English
-                </button>
-                <button
-                  onClick={() => setLanguage("hindi")}
-                  className={cn(
-                    "rounded px-2 py-1 text-xs",
-                    language === "hindi" ? "bg-slate-100 text-slate-900" : "text-slate-600",
-                  )}
-                >
-                  Hindi
-                </button>
-              </motion.div>
-
-              <motion.button
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSimpleMode((prev) => !prev)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs",
-                  simpleMode
-                    ? "border-secondary/40 bg-secondary/10 text-secondary"
-                    : "border-slate-300 text-slate-600",
-                )}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Plain mode
-              </motion.button>
-            </div>
-          </header>
-
-          <div className="relative flex-1 space-y-3 overflow-y-auto p-4">
-            <AnimatePresence initial={false}>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={`${msg.role}-${index}-${msg.text.slice(0, 12)}`}
-                  layout
-                  initial={{ opacity: 0, x: msg.role === "user" ? 18 : -18, scale: 0.97 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                  className={cn("flex max-w-3xl gap-2", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.06 }}
-                    className={cn("mt-1 rounded-full p-2", msg.role === "ai" ? "bg-secondary/10" : "bg-primary/10")}
-                  >
-                    {msg.role === "ai" ? (
-                      <Sparkles className="h-4 w-4 text-secondary" />
-                    ) : (
-                      <User className="h-4 w-4 text-primary" />
-                    )}
-                  </motion.div>
-                  <div
-                    className={cn(
-                      "rounded-xl px-3 py-2 text-sm",
-                      msg.role === "ai"
-                        ? "border border-slate-200 bg-white text-slate-700"
-                        : "bg-primary text-white",
-                    )}
-                  >
-                    {msg.text}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
-          <footer className="border-t border-slate-200 p-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    handleSendMessage();
-                  }
-                }}
-                placeholder="Type your message..."
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-secondary focus:outline-none"
-              />
-              <Button onClick={handleSendMessage} aria-label="Send message">
-                <Send className="h-4 w-4" />
+            <Link to="/patient/reports/report_1">
+              <Button>
+                View Report Guidance <ArrowRight className="h-4 w-4" />
               </Button>
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Reports</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{patientPulse.totalReports}</p>
             </div>
-            <p className="mt-2 text-xs text-slate-500">
-              This chat space is for communication support and does not replace professional medical care.
-            </p>
-          </footer>
-        </motion.main>
+            <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Key Findings</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{patientPulse.totalFindings}</p>
+            </div>
+            <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Understanding Score</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{patientPulse.understandingScore}%</p>
+            </div>
+          </div>
+        </motion.section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <motion.article
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="card p-6 sm:p-8"
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-secondary" />
+              <h2 className="text-lg font-semibold text-slate-900">Your Reports</h2>
+            </div>
+            <div className="mt-4 space-y-3">
+              {state.reports.map((report) => (
+                <div key={report.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-900">{report.reportTitle}</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {report.assignedFaqIds.length} recommended explanation
+                    {report.assignedFaqIds.length === 1 ? "" : "s"} available
+                  </p>
+                  <div className="mt-2">
+                    <div className="insight-track">
+                      <div
+                        className="insight-fill bg-sky-500"
+                        style={{
+                          width: `${Math.max(
+                            6,
+                            report.findings.length > 0
+                              ? Math.min(100, Math.round((report.assignedFaqIds.length / report.findings.length) * 100))
+                              : 0,
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <Link to={`/patient/reports/${report.id}`} className="mt-3 inline-flex">
+                    <Button size="sm" variant="outline">
+                      Open Report
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </motion.article>
+
+          <motion.article
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="card-patient p-6 sm:p-8"
+          >
+            <div className="inline-flex rounded-lg bg-secondary/10 p-2">
+              <BookOpenCheck className="h-5 w-5 text-secondary" />
+            </div>
+            <h2 className="mt-3 text-lg font-semibold text-slate-900">How it works</h2>
+            <ul className="mt-3 space-y-2 text-sm text-slate-600">
+              <li>Doctor uploads and reviews your report findings.</li>
+              <li>Doctor assigns educational FAQs to your report.</li>
+              <li>You read simple explanations in one guided view.</li>
+            </ul>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                <UserRound className="h-3.5 w-3.5 text-secondary" />
+                Care Team Mode
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                This experience is designed for doctor-guided patient education, not chatbot-style interaction.
+              </p>
+            </div>
+            <div className="mt-4 rounded-xl border border-sky-200/70 bg-white/80 p-4">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
+                Guidance Progress
+              </p>
+              <div className="mt-2 insight-track">
+                <div
+                  className="insight-fill bg-sky-500"
+                  style={{ width: `${Math.max(6, patientPulse.understandingScore)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-600">
+                Based on assigned explanations versus findings in your available reports.
+              </p>
+            </div>
+          </motion.article>
+        </section>
       </div>
     </div>
   );

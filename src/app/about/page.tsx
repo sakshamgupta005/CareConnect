@@ -19,12 +19,6 @@ const values = [
   },
 ];
 
-const timeline = [
-  { year: "2022", title: "Prototype", detail: "Built an initial patient AI chat interface for care communication." },
-  { year: "2023", title: "Expansion", detail: "Added a doctor team chat workspace for coordinated discussions." },
-  { year: "2024", title: "Scale", detail: "Expanded chat workflows across multiple healthcare environments." },
-];
-
 export default function AboutPage() {
   return (
     <div className="bg-slate-50 py-12 sm:py-16">
@@ -59,32 +53,6 @@ export default function AboutPage() {
             </motion.article>
           ))}
         </section>
-
-        <motion.section
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="card p-6 sm:p-7"
-        >
-          <h2 className="text-xl font-semibold text-slate-900">Our journey</h2>
-          <div className="mt-5 space-y-4">
-            {timeline.map((item, index) => (
-              <motion.div
-                key={item.year}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -24 : 24 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.6 }}
-                transition={{ delay: index * 0.08, duration: 0.4 }}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-              >
-                <p className="text-xs font-semibold text-secondary">{item.year}</p>
-                <h3 className="mt-1 text-sm font-semibold text-slate-900">{item.title}</h3>
-                <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
 
         <motion.section
           initial={{ opacity: 0, y: 18 }}

@@ -1,133 +1,79 @@
 import { type ReactNode, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, MessageSquare, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { faqs, stats } from "../data/mock";
 
-const heroContainer = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.09,
-      delayChildren: 0.08,
-    },
-  },
-};
-
-const heroItem = {
-  hidden: { opacity: 0, y: 18 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
 export default function LandingPage() {
   return (
     <div className="bg-slate-50">
-      <section className="py-12 sm:py-16">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
-          <motion.div variants={heroContainer} initial="hidden" animate="show" className="space-y-6">
-            <motion.p
-              variants={heroItem}
-              whileHover={{ scale: 1.04 }}
-              transition={{ type: "spring", stiffness: 330, damping: 18 }}
-              className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary"
-            >
-              AI Chat Platform
-            </motion.p>
-            <motion.h1
-              variants={heroItem}
-              initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl"
-            >
-              CareConnect AI
-            </motion.h1>
-            <motion.p variants={heroItem} className="max-w-xl text-base text-slate-600 sm:text-lg">
-              The project is focused on clear communication through structured AI chat, for both patient-side and clinician-side workflows.
-            </motion.p>
-            <motion.div variants={heroItem} className="flex flex-wrap gap-3">
-              <Link to="/contact">
+      <section className="py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-6xl space-y-10 px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="space-y-5 text-center"
+          >
+            <p className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+              FAQ Recommendation Platform
+            </p>
+            <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">CareConnect AI</h1>
+            <p className="mx-auto max-w-4xl text-base text-slate-600 sm:text-lg">
+              Doctors upload reports, curate findings, and assign explanation FAQs. Patients then open a clean guidance page to understand their report clearly.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link to="/doctor">
                 <Button size="lg">
-                  Request Demo
+                  Open Doctor Dashboard
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/product">
+              <Link to="/patient">
                 <Button variant="outline" size="lg">
-                  View Product
+                  Open Patient View
                 </Button>
               </Link>
-            </motion.div>
-            <motion.ul variants={heroContainer} className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-              {[
-                "Easy patient explanations",
-                "Team collaboration tools",
-                "Secure by design",
-                "Fast onboarding",
-              ].map((item) => (
-                <motion.li key={item} variants={heroItem} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary" />
-                  {item}
-                </motion.li>
-              ))}
-            </motion.ul>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, rotate: 1.2 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            whileHover={{ y: -4 }}
-            className="card relative overflow-hidden p-6 sm:p-8"
-          >
-            <motion.div
-              animate={{
-                scale: [1, 1.08, 1],
-                opacity: [0.25, 0.38, 0.25],
-              }}
-              transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-              className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-secondary/20 blur-2xl"
-            />
-            <h2 className="text-xl font-semibold text-slate-900">What you can do today</h2>
-            <div className="relative mt-5 space-y-4">
-              <FeatureRow
-                icon={<MessageSquare className="h-5 w-5 text-secondary" />}
-                title="Patient Assistant"
-                description="Patient-facing AI chat space for clear medical communication."
-                to="/patient-assistant"
-              />
-              <FeatureRow
-                icon={<Users className="h-5 w-5 text-secondary" />}
-                title="Doctor Workspace"
-                description="Team AI chat space for shared updates and coordination."
-                to="/doctor-workspace"
-              />
-              <FeatureRow
-                icon={<ShieldCheck className="h-5 w-5 text-secondary" />}
-                title="Trust and Compliance"
-                description="Privacy and security controls around every chat workflow."
-                to="/trust-and-compliance"
-              />
             </div>
           </motion.div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            <WorkflowCard
+              icon={<Upload className="h-5 w-5 text-secondary" />}
+              title="Doctor Uploads Report"
+              description="The doctor uploads a text-based report file from the dashboard."
+              delay={0}
+              to="/doctor/reports/report_1#report-upload"
+            />
+            <WorkflowCard
+              icon={<MessageSquare className="h-5 w-5 text-secondary" />}
+              title="Doctor Adds FAQ Questions"
+              description="The doctor adds recommended FAQ questions for the patient."
+              delay={0.06}
+              to="/doctor/faqs#faq-form"
+            />
+            <WorkflowCard
+              icon={<FileText className="h-5 w-5 text-secondary" />}
+              title="Patient Gets Explanation"
+              description="The patient clicks a question and sees report-based explanation instantly."
+              delay={0.12}
+              to="/patient/reports/report_1#recommended-faqs"
+            />
+          </div>
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-white py-10">
+      <section className="border-y border-slate-200 bg-white py-14">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-4 px-4 sm:px-6 md:grid-cols-4">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 24, scale: 0.92 }}
+              initial={{ opacity: 0, y: 18, scale: 0.95 }}
               whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true, amount: 0.4 }}
-              transition={{ delay: index * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -3, scale: 1.02 }}
+              transition={{ delay: index * 0.06, duration: 0.35 }}
+              whileHover={{ y: -2 }}
               className="card p-4 text-center"
             >
               <p className="text-2xl font-bold text-primary">{stat.value}</p>
@@ -137,13 +83,82 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-12 sm:py-16">
+      <section className="py-14 sm:py-20">
+        <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, x: -16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            className="card p-7 sm:p-10"
+          >
+            <h2 className="text-xl font-semibold text-slate-900">What you can do today</h2>
+            <div className="mt-5 space-y-4">
+              <FeatureRow
+                icon={<Users className="h-5 w-5 text-secondary" />}
+                title="Doctor Workflow"
+                description="Upload reports, define findings, and assign reusable explanations."
+                to="/doctor/reports/report_1"
+              />
+              <FeatureRow
+                icon={<FileText className="h-5 w-5 text-secondary" />}
+                title="Patient Workflow"
+                description="Open your report page and read doctor-selected explanations."
+                to="/patient/reports/report_1"
+              />
+              <FeatureRow
+                icon={<ShieldCheck className="h-5 w-5 text-secondary" />}
+                title="Trust and Compliance"
+                description="Privacy and security controls around every FAQ workflow."
+                to="/trust-and-compliance"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 16 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            className="card p-7 sm:p-10"
+          >
+            <h2 className="text-xl font-semibold text-slate-900">System highlights</h2>
+            <ul className="mt-5 space-y-3 text-sm text-slate-700">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-secondary" />
+                Doctor-curated reusable FAQ explanation library
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-secondary" />
+                Report findings and tag-based FAQ suggestions
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-secondary" />
+                Patient-first accordion view for easier understanding
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-secondary" />
+                Simple clinical workflow with manual assignment control
+              </li>
+            </ul>
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Understand Your Report Better</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Doctors can add simple explanations and helpful guidance related to your report.
+              </p>
+              <Link to="/patient/reports/report_1" className="mt-3 inline-flex">
+                <Button size="sm" variant="outline">View Report Guidance</Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="py-14 sm:py-20">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <motion.h2
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.45 }}
+            transition={{ duration: 0.4 }}
             className="text-2xl font-bold text-primary sm:text-3xl"
           >
             Frequently asked questions
@@ -152,10 +167,10 @@ export default function LandingPage() {
             {faqs.map((faq, index) => (
               <motion.div
                 key={faq.question}
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.6 }}
-                transition={{ delay: index * 0.05, duration: 0.36 }}
+                transition={{ delay: index * 0.05, duration: 0.3 }}
               >
                 <FAQItem question={faq.question} answer={faq.answer} />
               </motion.div>
@@ -164,31 +179,61 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="pb-12 sm:pb-16">
+      <section className="pb-20 sm:pb-24">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden rounded-2xl bg-primary p-6 text-white sm:p-8"
+            transition={{ duration: 0.4 }}
+            className="rounded-2xl bg-primary p-6 text-white sm:p-8"
           >
-            <motion.div
-              animate={{ x: [0, 30, 0], opacity: [0.26, 0.4, 0.26] }}
-              transition={{ duration: 10, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-              className="absolute -right-16 -top-12 h-52 w-52 rounded-full bg-secondary/30 blur-3xl"
-            />
-            <h2 className="text-2xl font-bold sm:text-3xl">Ready to launch your AI chat workflow?</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">Ready to start the FAQ recommendation flow?</h2>
             <p className="mt-2 max-w-2xl text-slate-200">
-              Start with one focused chat use case and expand across your organization.
+              Go to the doctor dashboard, curate FAQ explanations, and assign guidance to a patient report.
             </p>
-            <Link to="/contact" className="mt-5 inline-block">
-              <Button variant="secondary" size="lg">Get Started</Button>
+            <Link to="/doctor/reports/report_1" className="mt-5 inline-block">
+              <Button variant="secondary" size="lg">Go to Doctor Dashboard</Button>
             </Link>
           </motion.div>
         </div>
       </section>
     </div>
+  );
+}
+
+function WorkflowCard({
+  icon,
+  title,
+  description,
+  delay,
+  to,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  delay: number;
+  to: string;
+}) {
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ delay, duration: 0.32 }}
+      whileHover={{ y: -2 }}
+      className="card p-5"
+    >
+      <Link
+        to={to}
+        className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30"
+      >
+        <div className="inline-flex rounded-lg bg-secondary/10 p-2">{icon}</div>
+        <h3 className="mt-3 text-base font-semibold text-slate-900">{title}</h3>
+        <p className="mt-1 text-sm text-slate-600">{description}</p>
+        <p className="mt-3 text-xs font-semibold text-secondary">Open this workflow</p>
+      </Link>
+    </motion.article>
   );
 }
 

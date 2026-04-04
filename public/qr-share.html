@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CareConnect QR Share</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --accent: #006a61;
+        --border: #e2e8f0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background: radial-gradient(circle at 10% 0%, rgba(0, 106, 97, 0.08), transparent 45%), var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 16px 60px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .layout {
+        display: grid;
+        gap: 24px;
+      }
+
+      @media (min-width: 900px) {
+        .layout {
+          grid-template-columns: 280px 1fr;
+        }
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      .qr-wrap {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        background: #fff;
+      }
+
+      .qr-wrap img,
+      #generatedQr canvas,
+      #generatedQr img {
+        width: 100%;
+        border-radius: 12px;
+        display: block;
+      }
+
+      .controls {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      @media (min-width: 640px) {
+        .controls {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .btn-outline {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #1e293b;
+      }
+
+      .hint {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #0f766e;
+        min-height: 18px;
+      }
+
+      .toggle {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+      }
+
+      .preview {
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fff;
+        font-size: 13px;
+        white-space: pre-line;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <div class="card">
+        <h1>CareConnect QR Share</h1>
+        <p>Scan or share this QR to open CareConnect quickly.</p>
+
+        <section class="layout">
+          <div>
+            <div class="qr-wrap" id="qrImageWrap">
+              <img
+                id="qrImage"
+                src="https://res.cloudinary.com/dyxlavy0j/image/upload/v1775298105/WhatsApp_Image_2026-04-04_at_3.49.17_PM_ss4a3g.jpg"
+                alt="CareConnect QR code"
+              />
+            </div>
+            <div class="qr-wrap" id="generatedQr" style="display: none"></div>
+          </div>
+
+          <div>
+            <p><strong>Website:</strong> https://CareConnect.com</p>
+
+            <label class="toggle">
+              <input id="loginToggle" type="checkbox" />
+              Logged in user mode for share message
+            </label>
+
+            <div class="controls">
+              <button class="btn btn-primary" id="whatsAppShare">Share on WhatsApp</button>
+              <button class="btn btn-outline" id="nativeShare">Share to Other Apps</button>
+              <button class="btn btn-outline" id="copyQrText">Copy QR Link Text</button>
+              <button class="btn btn-outline" id="copyMessageText">Copy Auto Message</button>
+              <a
+                class="btn btn-outline"
+                style="text-decoration: none; text-align: center"
+                href="https://res.cloudinary.com/dyxlavy0j/image/upload/v1775298105/WhatsApp_Image_2026-04-04_at_3.49.17_PM_ss4a3g.jpg"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open QR Image
+              </a>
+            </div>
+
+            <div class="preview" id="qrPreview"></div>
+            <div class="preview" id="messagePreview"></div>
+            <div class="hint" id="shareHint"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const SITE_URL = "https://CareConnect.com";
+      const QR_IMAGE_URL =
+        "https://res.cloudinary.com/dyxlavy0j/image/upload/v1775298105/WhatsApp_Image_2026-04-04_at_3.49.17_PM_ss4a3g.jpg";
+      const LOGIN_STORAGE_KEY = "careconnect_logged_in";
+
+      const toggle = document.getElementById("loginToggle");
+      const shareHint = document.getElementById("shareHint");
+      const qrPreview = document.getElementById("qrPreview");
+      const messagePreview = document.getElementById("messagePreview");
+
+      const qrImageWrap = document.getElementById("qrImageWrap");
+      const qrImage = document.getElementById("qrImage");
+      const generatedQr = document.getElementById("generatedQr");
+
+      new QRCode(generatedQr, {
+        text: SITE_URL,
+        width: 240,
+        height: 240,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+      });
+
+      qrImage.onerror = () => {
+        qrImageWrap.style.display = "none";
+        generatedQr.style.display = "block";
+      };
+
+      const storedState = localStorage.getItem(LOGIN_STORAGE_KEY) === "true";
+      toggle.checked = storedState;
+
+      function getQrLinkText() {
+        return `QR Image Link: ${QR_IMAGE_URL}\nWebsite Link: ${SITE_URL}`;
+      }
+
+      function getAutoMessageText(isLoggedIn) {
+        if (!isLoggedIn) {
+          return "CareConnect AI explains doctor-uploaded reports clearly.\nPlease log in first, then ask your report questions again.";
+        }
+
+        return "CareConnect AI helps patients understand uploaded medical reports.\nTry asking: What does low hemoglobin mean? Why is vitamin D low? What does high cholesterol mean?";
+      }
+
+      function getCombinedShareText(isLoggedIn) {
+        return `${getQrLinkText()}\n\n${getAutoMessageText(isLoggedIn)}`;
+      }
+
+      function updatePreview() {
+        qrPreview.textContent = `QR and website link text:\n${getQrLinkText()}`;
+        messagePreview.textContent = `Automatic message text:\n${getAutoMessageText(toggle.checked)}`;
+      }
+
+      function setHint(text) {
+        shareHint.textContent = text;
+        setTimeout(() => {
+          shareHint.textContent = "";
+        }, 2200);
+      }
+
+      toggle.addEventListener("change", () => {
+        localStorage.setItem(LOGIN_STORAGE_KEY, toggle.checked ? "true" : "false");
+        updatePreview();
+      });
+
+      document.getElementById("whatsAppShare").addEventListener("click", () => {
+        const message = getCombinedShareText(toggle.checked);
+        const shareLink = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(shareLink, "_blank", "noopener,noreferrer");
+      });
+
+      document.getElementById("nativeShare").addEventListener("click", async () => {
+        const text = getCombinedShareText(toggle.checked);
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: "CareConnect AI",
+              text,
+              url: SITE_URL,
+            });
+            setHint("Shared successfully.");
+            return;
+          }
+
+          await navigator.clipboard.writeText(text);
+          setHint("Share text copied to clipboard.");
+        } catch (error) {
+          setHint("Could not share. Please try again.");
+        }
+      });
+
+      document.getElementById("copyQrText").addEventListener("click", async () => {
+        try {
+          const text = getQrLinkText();
+          await navigator.clipboard.writeText(text);
+          setHint("Share text copied to clipboard.");
+        } catch (error) {
+          setHint("Could not copy text.");
+        }
+      });
+
+      document.getElementById("copyMessageText").addEventListener("click", async () => {
+        try {
+          const text = getAutoMessageText(toggle.checked);
+          await navigator.clipboard.writeText(text);
+          setHint("Share text copied to clipboard.");
+        } catch (error) {
+          setHint("Could not copy text.");
+        }
+      });
+
+      updatePreview();
+    </script>
+  </body>
+</html>

@@ -13,6 +13,9 @@ import CollaborationWorkspace from "./app/doctor/collaboration/page";
 import PatientAssistantPage from "./app/patient-assistant/page";
 import DoctorWorkspacePage from "./app/doctor-workspace/page";
 import TrustAndCompliancePage from "./app/trust-and-compliance/page";
+import DoctorFaqManagementPage from "./app/doctor/faqs/page";
+import DoctorReportDetailsPage from "./app/doctor/reports/report-detail-page";
+import PatientReportDetailsPage from "./app/patient/reports/report-detail-page";
 
 function AppContent() {
   const location = useLocation();
@@ -37,8 +40,11 @@ function AppContent() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/product" element={<ProductPage />} />
               <Route path="/doctor" element={<DoctorDashboard />} />
+              <Route path="/doctor/faqs" element={<DoctorFaqManagementPage />} />
+              <Route path="/doctor/reports/:reportId" element={<DoctorReportDetailsPage />} />
               <Route path="/doctor/collaboration" element={<CollaborationWorkspace />} />
               <Route path="/patient" element={<PatientDashboard />} />
+              <Route path="/patient/reports/:reportId" element={<PatientReportDetailsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/patient-assistant" element={<PatientAssistantPage />} />
