@@ -106,7 +106,7 @@ export default function DoctorDataPage() {
         </motion.header>
 
         <section className="grid gap-3 sm:grid-cols-3">
-          <MetricCard icon={Mail} label="Contact Submissions" value={`${stats.contacts}`} />
+          <MetricCard icon={Mail} label="Patient Submissions" value={`${stats.contacts}`} />
           <MetricCard icon={FileText} label="Uploaded Reports" value={`${stats.reports}`} />
           <MetricCard icon={Database} label="Analyzed Reports" value={`${stats.analyzed}`} />
         </section>
@@ -116,16 +116,16 @@ export default function DoctorDataPage() {
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <article className="card p-6 sm:p-8">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-slate-900">Contact Form Data</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Patient Submission Data</h2>
               <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600">
                 {contacts.length} entries
               </span>
             </div>
             <div className="mt-4 space-y-3">
               {loading ? (
-                <p className="text-sm text-slate-500">Loading contact submissions...</p>
+                <p className="text-sm text-slate-500">Loading patient submissions...</p>
               ) : contacts.length === 0 ? (
-                <p className="text-sm text-slate-500">No contact submissions found yet.</p>
+                <p className="text-sm text-slate-500">No patient submissions found yet.</p>
               ) : (
                 contacts.map((entry) => (
                   <div key={entry.id} className="rounded-xl border border-slate-200 bg-white p-4">
@@ -135,9 +135,34 @@ export default function DoctorDataPage() {
                     </div>
                     <p className="mt-1 text-xs text-slate-600">Email: {entry.email}</p>
                     <p className="mt-1 text-xs text-slate-600">Phone: {entry.phone || "Not provided"}</p>
+                    <p className="mt-1 text-xs text-slate-600">Role: {entry.role || "Not provided"}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Profile: {entry.age || "Age N/A"} | {entry.gender || "Gender N/A"} | {entry.bloodGroup || "Blood group N/A"}
+                    </p>
+                    {entry.reportTitle ? <p className="mt-1 text-xs text-slate-600">Report title: {entry.reportTitle}</p> : null}
+                    {entry.reportFilePath ? (
+                      <a
+                        href={entry.reportFilePath}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex text-xs font-medium text-secondary hover:underline"
+                      >
+                        Open uploaded file
+                      </a>
+                    ) : null}
+                    {entry.linkedReportId ? (
+                      <Link to={`/doctor/reports/${entry.linkedReportId}`} className="mt-2 inline-flex">
+                        <Button size="sm" variant="outline">Open linked report</Button>
+                      </Link>
+                    ) : null}
                     <p className="mt-2 rounded-lg bg-slate-50 p-2 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
                       {entry.message}
                     </p>
+                    {entry.reportRawText ? (
+                      <p className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-xs leading-relaxed text-slate-700">
+                        {entry.reportRawText}
+                      </p>
+                    ) : null}
                   </div>
                 ))
               )}

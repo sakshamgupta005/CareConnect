@@ -1,3 +1,4 @@
+import { fetchJsonWithApiFallback } from "./apiClient";
 import { validateContactSubmissionBody, type ContactSubmissionInput } from "./contactSubmission";
 import { loadAuthSession } from "./auth";
 
@@ -29,21 +30,13 @@ export type ContactSubmissionRecord = {
 export async function submitContactForm(input: ContactSubmissionInput): Promise<ContactSubmissionResponse> {
   const payload = validateContactSubmissionBody(input);
 
-  const response = await fetch("/api/contact", {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/contact", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
-
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
 
   if (!response.ok) {
     const message =
@@ -72,20 +65,13 @@ export async function submitContactForm(input: ContactSubmissionInput): Promise<
 
 export async function listContactSubmissions(): Promise<ContactSubmissionRecord[]> {
   const session = loadAuthSession();
-  const response = await fetch("/api/contact", {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback("/api/contact", {
     headers: session
       ? {
           "x-careconnect-role": session.role,
         }
       : undefined,
   });
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
 
   if (!response.ok) {
     const message =
@@ -109,7 +95,7 @@ export async function deleteContactSubmission(submissionId: string): Promise<voi
   }
 
   const session = loadAuthSession();
-  const response = await fetch(`/api/contact?id=${encodeURIComponent(id)}`, {
+  const { response, payload: parsed } = await fetchJsonWithApiFallback(`/api/contact?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: session
       ? {
@@ -117,14 +103,6 @@ export async function deleteContactSubmission(submissionId: string): Promise<voi
         }
       : undefined,
   });
-
-  const raw = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    parsed = null;
-  }
 
   if (!response.ok) {
     const message =

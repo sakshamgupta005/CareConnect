@@ -79,3 +79,18 @@ model ContactSubmission {
   message          String
   createdAt        DateTime @default(now())
 }
+
+model DoctorTeamMember {
+  id             String   @id @default(cuid())
+  patientPublicId String
+  doctorPublicId  String
+  doctorName      String?
+  doctorSpecialty String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([patientPublicId, doctorPublicId])
+  @@index([patientPublicId])
+  @@index([doctorPublicId])
+}

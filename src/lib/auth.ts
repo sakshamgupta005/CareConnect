@@ -8,10 +8,18 @@ export type AuthSession = {
 
 export const AUTH_STORAGE_KEY = "careconnect_auth_session_v1";
 export const LEGACY_LOGIN_FLAG_KEY = "careconnect_logged_in";
-export const DEMO_LOGIN_PASSWORD = "careconnect123";
+
+export function normalizePhoneIdentifier(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+export function isValidPhoneIdentifier(value: string): boolean {
+  const normalized = normalizePhoneIdentifier(value);
+  return normalized.length >= 7 && normalized.length <= 15;
+}
 
 export function validateLoginPassword(password: string): boolean {
-  return password === DEMO_LOGIN_PASSWORD;
+  return isValidPhoneIdentifier(password);
 }
 
 export function loadAuthSession(): AuthSession | null {

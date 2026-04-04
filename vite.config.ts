@@ -10,6 +10,7 @@ import type { Connect, Plugin } from "vite";
 import { defineConfig } from "vite";
 import { analyzeHealthReport } from "./src/lib/ai";
 import { validateContactSubmissionBody } from "./src/lib/contactSubmission";
+import { normalizeDoctorPublicIdInput, normalizePatientPublicId } from "./src/lib/doctorTeam";
 import { assertPrismaDelegates, prisma } from "./src/lib/prisma";
 
 const UPLOAD_PDF_API_PATH = "/api/uploads/pdf";
@@ -18,6 +19,8 @@ const ANALYZE_REPORT_API_PATH = "/api/analyze-report";
 const REPORTS_API_PATH = "/api/reports";
 const REPORT_BY_ID_API_PREFIX = "/api/report/";
 const CONTACT_API_PATH = "/api/contact";
+const DOCTOR_TEAM_API_PATH = "/api/doctor-team";
+const DOCTOR_TEAM_PUBLIC_API_PREFIX = "/api/doctor-team/public/";
 
 const MAX_UPLOAD_BYTES = 16 * 1024 * 1024;
 const MAX_ANALYZE_TEXT_CHARS = 120000;
@@ -96,6 +99,72 @@ type LocalReportStore = {
   recommendations: LocalRecommendationRecord[];
 };
 
+type LocalContactSubmissionRecord = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string | null;
+  age: string | null;
+  gender: string | null;
+  bloodGroup: string | null;
+  reportTitle: string | null;
+  reportFileName: string | null;
+  reportFileType: string | null;
+  reportFilePath: string | null;
+  reportRawText: string | null;
+  linkedReportId: string | null;
+  linkedReportStatus: "uploaded" | "analyzed" | null;
+  message: string;
+  createdAt: string;
+};
+
+type LocalContactSubmissionStore = {
+  submissions: LocalContactSubmissionRecord[];
+};
+
+type DoctorTeamBody = {
+  patientPublicId?: unknown;
+  doctorPublicId?: unknown;
+  doctorName?: unknown;
+  doctorSpecialty?: unknown;
+  notes?: unknown;
+};
+
+type LocalDoctorTeamMemberRecord = {
+  id: string;
+  patientPublicId: string;
+  doctorPublicId: string;
+  doctorName: string | null;
+  doctorSpecialty: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type LocalDoctorTeamStore = {
+  members: LocalDoctorTeamMemberRecord[];
+};
+
+type DoctorTeamDbRecord = {
+  id: string;
+  patientPublicId: string;
+  doctorPublicId: string;
+  doctorName: string | null;
+  doctorSpecialty: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type DoctorTeamPublicSource = {
+  doctorPublicId: string;
+  doctorName: string | null;
+  doctorSpecialty: string | null;
+  patientPublicId: string;
+  updatedAt: Date;
+};
+
 type SerializedReport = {
   id: string;
   title: string;
@@ -126,6 +195,8 @@ function reportApiPlugin(projectRoot: string): Plugin {
 function createReportMiddleware(projectRoot: string): Connect.NextHandleFunction {
   const uploadsDirectory = path.join(projectRoot, "public", "uploads");
   const localReportStoreFilePath = path.join(projectRoot, ".data", "report-store.json");
+  const localContactStoreFilePath = path.join(projectRoot, ".data", "contact-submission-store.json");
+  const localDoctorTeamStoreFilePath = path.join(projectRoot, ".data", "doctor-team-store.json");
 
   return async (req, res, next) => {
     const requestUrl = req.url || "";
@@ -157,7 +228,17 @@ function createReportMiddleware(projectRoot: string): Connect.NextHandleFunction
       }
 
       if (isContactApiPath(requestUrl)) {
-        await handleContactRequest(req, res);
+        await handleContactRequest(req, res, localContactStoreFilePath);
+        return;
+      }
+
+      if (isDoctorTeamPublicApiPath(requestUrl)) {
+        await handleDoctorTeamPublicProfileRequest(req, res, localDoctorTeamStoreFilePath);
+        return;
+      }
+
+      if (isDoctorTeamApiPath(requestUrl)) {
+        await handleDoctorTeamRequest(req, res, localDoctorTeamStoreFilePath);
         return;
       }
     } catch (error) {
@@ -474,9 +555,11 @@ async function handleReportsRequest(
   }
 }
 
-async function handleContactRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  assertPrismaDelegates(["contactSubmission"]);
-
+async function handleContactRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  localContactStoreFilePath: string,
+): Promise<void> {
   if (req.method === "GET") {
     const role = getRequestHeader(req, "x-careconnect-role").toLowerCase();
     if (role !== "doctor") {
@@ -485,6 +568,8 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
     }
 
     try {
+      assertPrismaDelegates(["contactSubmission"]);
+
       const submissions = await prisma.contactSubmission.findMany({
         orderBy: { createdAt: "desc" },
         select: {
@@ -518,6 +603,11 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
       );
       return;
     } catch (error) {
+      if (shouldUseLocalContactStore(error)) {
+        sendJson(res, 200, await listLocalContactSubmissions(localContactStoreFilePath));
+        return;
+      }
+
       console.error("[api/contact] Failed to load contact submissions:", error);
       const message = error instanceof Error ? error.message : "Could not load contact submissions.";
       sendJson(res, 400, { error: message });
@@ -526,9 +616,12 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
   }
 
   if (req.method === "POST") {
+    let payload: ReturnType<typeof validateContactSubmissionBody> | null = null;
+
     try {
       const body = await parseJsonBody(req, MAX_UPLOAD_BYTES);
-      const payload = validateContactSubmissionBody(body);
+      payload = validateContactSubmissionBody(body);
+      assertPrismaDelegates(["contactSubmission"]);
 
       const submission = await prisma.contactSubmission.create({
         data: {
@@ -560,6 +653,12 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
       });
       return;
     } catch (error) {
+      if (payload && shouldUseLocalContactStore(error)) {
+        const submission = await createLocalContactSubmission(localContactStoreFilePath, payload);
+        sendJson(res, 201, submission);
+        return;
+      }
+
       console.error("[api/contact] Failed to save contact submission:", error);
       const message = error instanceof Error ? error.message : "Could not save contact submission.";
       sendJson(res, 400, { error: message });
@@ -581,6 +680,7 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
         sendJson(res, 400, { error: "Missing submission id." });
         return;
       }
+      assertPrismaDelegates(["contactSubmission"]);
 
       await prisma.contactSubmission.delete({
         where: { id: submissionId },
@@ -589,6 +689,19 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
       sendJson(res, 200, { deleted: true });
       return;
     } catch (error) {
+      if (shouldUseLocalContactStore(error)) {
+        const url = new URL(req.url || "", "http://localhost");
+        const submissionId = url.searchParams.get("id")?.trim() || "";
+        if (!submissionId) {
+          sendJson(res, 400, { error: "Missing submission id." });
+          return;
+        }
+
+        await deleteLocalContactSubmission(localContactStoreFilePath, submissionId);
+        sendJson(res, 200, { deleted: true });
+        return;
+      }
+
       console.error("[api/contact] Failed to delete contact submission:", error);
       const message = error instanceof Error ? error.message : "Could not delete contact submission.";
       sendJson(res, 400, { error: message });
@@ -597,6 +710,223 @@ async function handleContactRequest(req: IncomingMessage, res: ServerResponse): 
   }
 
   sendJson(res, 405, { error: "Method not allowed." });
+}
+
+async function handleDoctorTeamRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  localDoctorTeamStoreFilePath: string,
+): Promise<void> {
+  if (req.method === "GET") {
+    const patientPublicId = extractPatientPublicIdFromQuery(req.url || "");
+    if (!patientPublicId) {
+      sendJson(res, 400, { error: "Missing patient public id." });
+      return;
+    }
+
+    try {
+      assertPrismaDelegates(["doctorTeamMember"]);
+      const delegate = getDoctorTeamDelegate();
+
+      const members = (await delegate.findMany({
+        where: { patientPublicId },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          patientPublicId: true,
+          doctorPublicId: true,
+          doctorName: true,
+          doctorSpecialty: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })) as DoctorTeamDbRecord[];
+
+      sendJson(res, 200, members.map(serializeDoctorTeamMember));
+      return;
+    } catch (error) {
+      if (shouldUseLocalDoctorTeamStore(error)) {
+        sendJson(res, 200, await listLocalDoctorTeamMembers(localDoctorTeamStoreFilePath, patientPublicId));
+        return;
+      }
+
+      console.error("[api/doctor-team] Failed to load doctor team:", error);
+      const message = error instanceof Error ? error.message : "Could not load doctor team.";
+      sendJson(res, 400, { error: message });
+      return;
+    }
+  }
+
+  if (req.method === "POST") {
+    let payload: ReturnType<typeof validateDoctorTeamBody> | null = null;
+
+    try {
+      const body = (await parseJsonBody(req, MAX_UPLOAD_BYTES)) as DoctorTeamBody;
+      payload = validateDoctorTeamBody(body);
+      assertPrismaDelegates(["doctorTeamMember"]);
+      const delegate = getDoctorTeamDelegate();
+
+      const existing = (await delegate.findFirst({
+        where: {
+          patientPublicId: payload.patientPublicId,
+          doctorPublicId: payload.doctorPublicId,
+        },
+        select: { id: true },
+      })) as { id: string } | null;
+
+      if (existing) {
+        sendJson(res, 409, { error: "Doctor already exists in your team." });
+        return;
+      }
+
+      const createdMember = (await delegate.create({
+        data: payload,
+        select: {
+          id: true,
+          patientPublicId: true,
+          doctorPublicId: true,
+          doctorName: true,
+          doctorSpecialty: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })) as DoctorTeamDbRecord;
+
+      sendJson(res, 201, serializeDoctorTeamMember(createdMember));
+      return;
+    } catch (error) {
+      if (payload && shouldUseLocalDoctorTeamStore(error)) {
+        try {
+          const created = await createLocalDoctorTeamMember(localDoctorTeamStoreFilePath, payload);
+          sendJson(res, 201, created);
+          return;
+        } catch (localError) {
+          const localMessage = localError instanceof Error ? localError.message : "Could not add doctor to team.";
+          const statusCode = localMessage.toLowerCase().includes("already exists") ? 409 : 400;
+          sendJson(res, statusCode, { error: localMessage });
+          return;
+        }
+      }
+
+      const message = error instanceof Error ? error.message : "Could not add doctor to team.";
+      const statusCode = isDuplicateDoctorTeamError(error) ? 409 : 400;
+      console.error("[api/doctor-team] Failed to add doctor:", error);
+      sendJson(res, statusCode, { error: isDuplicateDoctorTeamError(error) ? "Doctor already exists in your team." : message });
+      return;
+    }
+  }
+
+  if (req.method === "DELETE") {
+    const patientPublicId = extractPatientPublicIdFromQuery(req.url || "");
+    const memberId = extractDoctorTeamMemberIdFromQuery(req.url || "");
+    if (!patientPublicId) {
+      sendJson(res, 400, { error: "Missing patient public id." });
+      return;
+    }
+    if (!memberId) {
+      sendJson(res, 400, { error: "Missing doctor team member id." });
+      return;
+    }
+
+    try {
+      assertPrismaDelegates(["doctorTeamMember"]);
+      const delegate = getDoctorTeamDelegate();
+
+      const result = (await delegate.deleteMany({
+        where: {
+          id: memberId,
+          patientPublicId,
+        },
+      })) as { count: number };
+
+      if (result.count === 0) {
+        sendJson(res, 404, { error: "Doctor team member not found." });
+        return;
+      }
+
+      sendJson(res, 200, { deleted: true });
+      return;
+    } catch (error) {
+      if (shouldUseLocalDoctorTeamStore(error)) {
+        try {
+          await deleteLocalDoctorTeamMember(localDoctorTeamStoreFilePath, patientPublicId, memberId);
+          sendJson(res, 200, { deleted: true });
+          return;
+        } catch (localError) {
+          const localMessage = localError instanceof Error ? localError.message : "Could not remove doctor from team.";
+          const statusCode = localMessage.toLowerCase().includes("not found") ? 404 : 400;
+          sendJson(res, statusCode, { error: localMessage });
+          return;
+        }
+      }
+
+      console.error("[api/doctor-team] Failed to remove doctor:", error);
+      const message = error instanceof Error ? error.message : "Could not remove doctor from team.";
+      sendJson(res, 400, { error: message });
+      return;
+    }
+  }
+
+  sendJson(res, 405, { error: "Method not allowed." });
+}
+
+async function handleDoctorTeamPublicProfileRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  localDoctorTeamStoreFilePath: string,
+): Promise<void> {
+  if (req.method !== "GET") {
+    sendJson(res, 405, { error: "Method not allowed." });
+    return;
+  }
+
+  const doctorPublicId = extractDoctorPublicIdFromPublicApiUrl(req.url || "");
+  if (!doctorPublicId) {
+    sendJson(res, 400, { error: "Missing doctor public id." });
+    return;
+  }
+
+  try {
+    assertPrismaDelegates(["doctorTeamMember"]);
+    const delegate = getDoctorTeamDelegate();
+
+    const members = (await delegate.findMany({
+      where: { doctorPublicId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        doctorPublicId: true,
+        doctorName: true,
+        doctorSpecialty: true,
+        patientPublicId: true,
+        updatedAt: true,
+      },
+    })) as DoctorTeamPublicSource[];
+
+    if (members.length === 0) {
+      sendJson(res, 404, { error: "Doctor public profile not found." });
+      return;
+    }
+
+    sendJson(res, 200, buildDoctorPublicProfileResponse(members));
+    return;
+  } catch (error) {
+    if (shouldUseLocalDoctorTeamStore(error)) {
+      const profile = await getLocalDoctorPublicProfile(localDoctorTeamStoreFilePath, doctorPublicId);
+      if (!profile) {
+        sendJson(res, 404, { error: "Doctor public profile not found." });
+        return;
+      }
+
+      sendJson(res, 200, profile);
+      return;
+    }
+
+    console.error("[api/doctor-team/public] Failed to load profile:", error);
+    const message = error instanceof Error ? error.message : "Could not load doctor public profile.";
+    sendJson(res, 400, { error: message });
+  }
 }
 
 async function getReportDetails(
@@ -658,6 +988,14 @@ function isContactApiPath(url: string): boolean {
   return url === CONTACT_API_PATH || url.startsWith(`${CONTACT_API_PATH}?`);
 }
 
+function isDoctorTeamApiPath(url: string): boolean {
+  return url === DOCTOR_TEAM_API_PATH || url.startsWith(`${DOCTOR_TEAM_API_PATH}?`);
+}
+
+function isDoctorTeamPublicApiPath(url: string): boolean {
+  return extractDoctorPublicIdFromPublicApiUrl(url) !== null;
+}
+
 function isReportByIdApiPath(url: string): boolean {
   return extractReportIdFromUrl(url) !== null;
 }
@@ -670,6 +1008,22 @@ function extractReportIdFromUrl(url: string): string | null {
 
   const encodedId = pathname.slice(REPORT_BY_ID_API_PREFIX.length).split("/")[0] || "";
   return encodedId ? decodeURIComponent(encodedId) : null;
+}
+
+function extractDoctorPublicIdFromPublicApiUrl(url: string): string | null {
+  const pathname = url.split("?")[0]?.split("#")[0] || "";
+  if (!pathname.startsWith(DOCTOR_TEAM_PUBLIC_API_PREFIX)) {
+    return null;
+  }
+
+  const encodedId = pathname.slice(DOCTOR_TEAM_PUBLIC_API_PREFIX.length).split("/")[0] || "";
+  if (!encodedId) {
+    return null;
+  }
+
+  const decoded = decodeURIComponent(encodedId);
+  const normalized = normalizeDoctorPublicIdInput(decoded);
+  return normalized || null;
 }
 
 async function parseJsonBody(req: IncomingMessage, maxBytes: number): Promise<unknown> {
@@ -746,6 +1100,47 @@ function validateAnalyzeReportBody(body: AnalyzeReportBody): string {
     throw new Error("Missing reportId.");
   }
   return reportId;
+}
+
+function validateDoctorTeamBody(body: DoctorTeamBody): {
+  patientPublicId: string;
+  doctorPublicId: string;
+  doctorName: string | null;
+  doctorSpecialty: string | null;
+  notes: string | null;
+} {
+  const patientPublicId = normalizePatientPublicId(typeof body.patientPublicId === "string" ? body.patientPublicId : "");
+  const doctorPublicId = normalizeDoctorPublicIdInput(typeof body.doctorPublicId === "string" ? body.doctorPublicId : "");
+  const doctorName = typeof body.doctorName === "string" ? body.doctorName.trim().slice(0, 120) : "";
+  const doctorSpecialty = typeof body.doctorSpecialty === "string" ? body.doctorSpecialty.trim().slice(0, 120) : "";
+  const notes = typeof body.notes === "string" ? body.notes.trim().slice(0, 500) : "";
+
+  if (!patientPublicId) {
+    throw new Error("Missing patient public id.");
+  }
+
+  if (!doctorPublicId) {
+    throw new Error("Missing doctor public id.");
+  }
+
+  return {
+    patientPublicId,
+    doctorPublicId,
+    doctorName: doctorName || null,
+    doctorSpecialty: doctorSpecialty || null,
+    notes: notes || null,
+  };
+}
+
+function extractPatientPublicIdFromQuery(urlValue: string): string {
+  const url = new URL(urlValue || "", "http://localhost");
+  const normalized = normalizePatientPublicId(url.searchParams.get("patientPublicId") ?? "");
+  return normalized;
+}
+
+function extractDoctorTeamMemberIdFromQuery(urlValue: string): string {
+  const url = new URL(urlValue || "", "http://localhost");
+  return url.searchParams.get("id")?.trim() || "";
 }
 
 function decodePdfBuffer(dataBase64: string): Buffer {
@@ -830,12 +1225,49 @@ function shouldUseLocalReportStore(error: unknown): boolean {
   );
 }
 
+function shouldUseLocalContactStore(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return (
+    message.includes("can't reach database server") ||
+    message.includes("environment variable not found: database_url") ||
+    message.includes('prisma client delegate "prisma.contactsubmission" is missing') ||
+    message.includes("error validating datasource") ||
+    (message.includes("datasource") && message.includes("direct_url"))
+  );
+}
+
+function shouldUseLocalDoctorTeamStore(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return (
+    message.includes("can't reach database server") ||
+    message.includes("environment variable not found: database_url") ||
+    message.includes('prisma client delegate "prisma.doctorteammember" is missing') ||
+    message.includes("error validating datasource") ||
+    (message.includes("table") && message.includes("doctorteammember")) ||
+    (message.includes("datasource") && message.includes("direct_url"))
+  );
+}
+
 function createEmptyLocalReportStore(): LocalReportStore {
   return {
     reports: [],
     insights: [],
     faqs: [],
     recommendations: [],
+  };
+}
+
+function createEmptyLocalContactStore(): LocalContactSubmissionStore {
+  return {
+    submissions: [],
+  };
+}
+
+function createEmptyLocalDoctorTeamStore(): LocalDoctorTeamStore {
+  return {
+    members: [],
   };
 }
 
@@ -865,6 +1297,58 @@ async function writeLocalReportStore(localReportStoreFilePath: string, store: Lo
   await writeFile(localReportStoreFilePath, JSON.stringify(store, null, 2), "utf8");
 }
 
+async function readLocalContactStore(localContactStoreFilePath: string): Promise<LocalContactSubmissionStore> {
+  try {
+    const raw = await readFile(localContactStoreFilePath, "utf8");
+    const parsed = JSON.parse(raw) as Partial<LocalContactSubmissionStore>;
+
+    return {
+      submissions: Array.isArray(parsed.submissions) ? parsed.submissions : [],
+    };
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code === "ENOENT") {
+      return createEmptyLocalContactStore();
+    }
+
+    throw error;
+  }
+}
+
+async function writeLocalContactStore(
+  localContactStoreFilePath: string,
+  store: LocalContactSubmissionStore,
+): Promise<void> {
+  await mkdir(path.dirname(localContactStoreFilePath), { recursive: true });
+  await writeFile(localContactStoreFilePath, JSON.stringify(store, null, 2), "utf8");
+}
+
+async function readLocalDoctorTeamStore(localDoctorTeamStoreFilePath: string): Promise<LocalDoctorTeamStore> {
+  try {
+    const raw = await readFile(localDoctorTeamStoreFilePath, "utf8");
+    const parsed = JSON.parse(raw) as Partial<LocalDoctorTeamStore>;
+
+    return {
+      members: Array.isArray(parsed.members) ? parsed.members : [],
+    };
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code === "ENOENT") {
+      return createEmptyLocalDoctorTeamStore();
+    }
+
+    throw error;
+  }
+}
+
+async function writeLocalDoctorTeamStore(
+  localDoctorTeamStoreFilePath: string,
+  store: LocalDoctorTeamStore,
+): Promise<void> {
+  await mkdir(path.dirname(localDoctorTeamStoreFilePath), { recursive: true });
+  await writeFile(localDoctorTeamStoreFilePath, JSON.stringify(store, null, 2), "utf8");
+}
+
 async function createLocalReport(
   localReportStoreFilePath: string,
   payload: ReturnType<typeof validateUploadReportBody>,
@@ -887,6 +1371,144 @@ async function createLocalReport(
   store.reports.push(report);
   await writeLocalReportStore(localReportStoreFilePath, store);
   return serializeLocalReport(report);
+}
+
+async function listLocalContactSubmissions(
+  localContactStoreFilePath: string,
+): Promise<LocalContactSubmissionRecord[]> {
+  const store = await readLocalContactStore(localContactStoreFilePath);
+  return [...store.submissions].sort((left, right) => {
+    const leftTime = new Date(left.createdAt).getTime();
+    const rightTime = new Date(right.createdAt).getTime();
+    return rightTime - leftTime;
+  });
+}
+
+async function createLocalContactSubmission(
+  localContactStoreFilePath: string,
+  payload: ReturnType<typeof validateContactSubmissionBody>,
+): Promise<{ id: string; createdAt: string }> {
+  const store = await readLocalContactStore(localContactStoreFilePath);
+  const createdAt = new Date().toISOString();
+  const submission: LocalContactSubmissionRecord = {
+    id: randomUUID(),
+    name: payload.name,
+    email: payload.email,
+    phone: payload.phone || null,
+    role: payload.role || null,
+    age: payload.age || null,
+    gender: payload.gender || null,
+    bloodGroup: payload.bloodGroup || null,
+    reportTitle: payload.reportTitle || null,
+    reportFileName: payload.reportFileName || null,
+    reportFileType: payload.reportFileType || null,
+    reportFilePath: payload.reportFilePath || null,
+    reportRawText: payload.reportRawText || null,
+    linkedReportId: payload.linkedReportId || null,
+    linkedReportStatus: payload.linkedReportStatus || null,
+    message: payload.message,
+    createdAt,
+  };
+
+  store.submissions.push(submission);
+  await writeLocalContactStore(localContactStoreFilePath, store);
+  return { id: submission.id, createdAt: submission.createdAt };
+}
+
+async function deleteLocalContactSubmission(
+  localContactStoreFilePath: string,
+  submissionId: string,
+): Promise<void> {
+  const store = await readLocalContactStore(localContactStoreFilePath);
+  const nextSubmissions = store.submissions.filter((item) => item.id !== submissionId);
+
+  if (nextSubmissions.length === store.submissions.length) {
+    throw new Error("Submission not found.");
+  }
+
+  store.submissions = nextSubmissions;
+  await writeLocalContactStore(localContactStoreFilePath, store);
+}
+
+async function listLocalDoctorTeamMembers(
+  localDoctorTeamStoreFilePath: string,
+  patientPublicId: string,
+): Promise<LocalDoctorTeamMemberRecord[]> {
+  const store = await readLocalDoctorTeamStore(localDoctorTeamStoreFilePath);
+  return store.members
+    .filter((member) => member.patientPublicId === patientPublicId)
+    .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
+}
+
+async function createLocalDoctorTeamMember(
+  localDoctorTeamStoreFilePath: string,
+  payload: ReturnType<typeof validateDoctorTeamBody>,
+): Promise<LocalDoctorTeamMemberRecord> {
+  const store = await readLocalDoctorTeamStore(localDoctorTeamStoreFilePath);
+  const exists = store.members.some(
+    (member) =>
+      member.patientPublicId === payload.patientPublicId && member.doctorPublicId === payload.doctorPublicId,
+  );
+
+  if (exists) {
+    throw new Error("Doctor already exists in your team.");
+  }
+
+  const now = new Date().toISOString();
+  const member: LocalDoctorTeamMemberRecord = {
+    id: randomUUID(),
+    patientPublicId: payload.patientPublicId,
+    doctorPublicId: payload.doctorPublicId,
+    doctorName: payload.doctorName,
+    doctorSpecialty: payload.doctorSpecialty,
+    notes: payload.notes,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.members.push(member);
+  await writeLocalDoctorTeamStore(localDoctorTeamStoreFilePath, store);
+  return member;
+}
+
+async function deleteLocalDoctorTeamMember(
+  localDoctorTeamStoreFilePath: string,
+  patientPublicId: string,
+  memberId: string,
+): Promise<void> {
+  const store = await readLocalDoctorTeamStore(localDoctorTeamStoreFilePath);
+  const before = store.members.length;
+  store.members = store.members.filter((member) => !(member.id === memberId && member.patientPublicId === patientPublicId));
+
+  if (before === store.members.length) {
+    throw new Error("Doctor team member not found.");
+  }
+
+  await writeLocalDoctorTeamStore(localDoctorTeamStoreFilePath, store);
+}
+
+async function getLocalDoctorPublicProfile(
+  localDoctorTeamStoreFilePath: string,
+  doctorPublicId: string,
+): Promise<Record<string, unknown> | null> {
+  const store = await readLocalDoctorTeamStore(localDoctorTeamStoreFilePath);
+  const matches = store.members
+    .filter((member) => member.doctorPublicId === doctorPublicId)
+    .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  return buildDoctorPublicProfileResponse(
+    matches.map((member) => ({
+      doctorPublicId: member.doctorPublicId,
+      doctorName: member.doctorName,
+      doctorSpecialty: member.doctorSpecialty,
+      patientPublicId: member.patientPublicId,
+      updatedAt: new Date(member.updatedAt),
+    })),
+  );
 }
 
 async function getLocalReportDetails(
@@ -1096,6 +1718,76 @@ function serializeLocalReport(report: LocalReportRecord): SerializedReport {
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
   };
+}
+
+function serializeDoctorTeamMember(record: DoctorTeamDbRecord): LocalDoctorTeamMemberRecord {
+  return {
+    id: record.id,
+    patientPublicId: record.patientPublicId,
+    doctorPublicId: record.doctorPublicId,
+    doctorName: record.doctorName,
+    doctorSpecialty: record.doctorSpecialty,
+    notes: record.notes,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+function buildDoctorPublicProfileResponse(members: DoctorTeamPublicSource[]): Record<string, unknown> {
+  const connectedPatientIds = Array.from(new Set(members.map((member) => member.patientPublicId))).sort();
+  const doctorName = members.find((member) => member.doctorName)?.doctorName ?? null;
+  const doctorSpecialty = members.find((member) => member.doctorSpecialty)?.doctorSpecialty ?? null;
+  const lastUpdatedAt = members
+    .map((member) => member.updatedAt.getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => right - left)[0];
+
+  return {
+    doctorPublicId: members[0]?.doctorPublicId ?? "",
+    doctorName,
+    doctorSpecialty,
+    connectedPatients: connectedPatientIds.length,
+    relatedPatientPublicIds: connectedPatientIds,
+    lastUpdatedAt: typeof lastUpdatedAt === "number" ? new Date(lastUpdatedAt).toISOString() : null,
+  };
+}
+
+function getDoctorTeamDelegate(): {
+  findMany: (args: unknown) => Promise<unknown>;
+  findFirst: (args: unknown) => Promise<unknown>;
+  create: (args: unknown) => Promise<unknown>;
+  deleteMany: (args: unknown) => Promise<unknown>;
+} {
+  const delegate = (prisma as unknown as Record<string, unknown>).doctorTeamMember;
+  if (!delegate || typeof delegate !== "object") {
+    throw new Error('Prisma client delegate "prisma.doctorTeamMember" is missing.');
+  }
+
+  const typedDelegate = delegate as {
+    findMany?: (args: unknown) => Promise<unknown>;
+    findFirst?: (args: unknown) => Promise<unknown>;
+    create?: (args: unknown) => Promise<unknown>;
+    deleteMany?: (args: unknown) => Promise<unknown>;
+  };
+
+  if (!typedDelegate.findMany || !typedDelegate.findFirst || !typedDelegate.create || !typedDelegate.deleteMany) {
+    throw new Error('Prisma client delegate "prisma.doctorTeamMember" is missing required methods.');
+  }
+
+  return {
+    findMany: typedDelegate.findMany.bind(delegate),
+    findFirst: typedDelegate.findFirst.bind(delegate),
+    create: typedDelegate.create.bind(delegate),
+    deleteMany: typedDelegate.deleteMany.bind(delegate),
+  };
+}
+
+function isDuplicateDoctorTeamError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return (
+    message.includes("unique constraint") &&
+    message.includes("doctor")
+  );
 }
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {

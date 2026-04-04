@@ -211,6 +211,11 @@ export default function ContactPage() {
   };
 
   const handleSaveSubmission = async (shouldAnalyze: boolean) => {
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
+      setContactSubmitError("Name, email, and submission message are required before saving.");
+      return;
+    }
+
     if (shouldAnalyze && !reportRawText.trim()) {
       setContactSubmitError("Add report text or upload a PDF before running analysis.");
       return;
@@ -516,9 +521,9 @@ ${answered.join("\n")}`;
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-4"
         >
-          <h1 className="text-3xl font-bold text-primary sm:text-4xl">We are here to help</h1>
+          <h1 className="text-3xl font-bold text-primary sm:text-4xl">Submit Patient Report</h1>
           <p className="max-w-3xl text-slate-600">
-            Reach out for a demo, integration planning, or onboarding support.
+            Save patient details, keep the uploaded report inside doctor submissions, and run analysis right from this page.
           </p>
         </motion.section>
 
@@ -531,7 +536,29 @@ ${answered.join("\n")}`;
             whileHover={{ y: -2 }}
             className="card p-7 sm:p-9"
           >
-            <h2 className="text-lg font-semibold text-slate-900">Contact information</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Exact format for auto-detection</h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Age, gender, and blood group are easiest to detect when the text contains the exact labels below. The form also
+              prepends those lines automatically when you save.
+            </p>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sample layout</p>
+              <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{PROFILE_SAMPLE_TEXT}</pre>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Age</p>
+                <p className="mt-2 text-sm text-slate-700">Use `Age: 45 years`</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Gender</p>
+                <p className="mt-2 text-sm text-slate-700">Use `Gender: Female`</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blood Group</p>
+                <p className="mt-2 text-sm text-slate-700">Use `Blood Group: O+`</p>
+              </div>
+            </div>
             <div className="mt-6 space-y-5 text-sm text-slate-700">
               {[
                 { icon: Mail, text: "sakshamgupta0295@gmil.com" },
@@ -578,18 +605,32 @@ ${answered.join("\n")}`;
                   >
                     <CheckCircle2 className="mx-auto h-10 w-10 text-secondary" />
                   </motion.div>
-                  <h3 className="text-lg font-semibold text-slate-900">Message sent</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {savedReportStatus === "analyzed" ? "Submission saved and analyzed" : "Submission saved"}
+                  </h3>
                   <p className="text-sm text-slate-600">
-                    Thank you. Our team will get back to you shortly.
+                    The patient submission is now stored for the doctor view.
                   </p>
                   {contactSubmissionId ? (
                     <p className="text-xs text-slate-500">Submission ID: {contactSubmissionId}</p>
                   ) : null}
-                  <Button variant="outline" onClick={() => {
-                    setSubmitted(false);
-                    setContactSubmitError("");
-                  }}>
-                    Send another message
+                  {savedReportId ? (
+                    <p className="text-xs text-slate-500">
+                      Linked report: {savedReportId} ({savedReportStatus || "uploaded"})
+                    </p>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSubmitted(false);
+                      setContactSubmitError("");
+                      setContactStatusMessage("");
+                      setContactSubmissionId("");
+                      setSavedReportId("");
+                      setSavedReportStatus("");
+                    }}
+                  >
+                    Create another submission
                   </Button>
                 </motion.div>
               ) : (
@@ -600,8 +641,14 @@ ${answered.join("\n")}`;
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.3 }}
                   className="space-y-5"
-                  onSubmit={handleSubmit}
                 >
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-slate-900">Patient submission form</h3>
+                    <p className="text-sm text-slate-600">
+                      Save the report into submissions, then optionally run analysis so it appears in the doctor dashboard with a linked report.
+                    </p>
+                  </div>
+
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -638,12 +685,12 @@ ${answered.join("\n")}`;
                     transition={{ delay: 0.08, duration: 0.22 }}
                     className="space-y-1.5 text-sm text-slate-700"
                   >
-                    <span>Phone (optional)</span>
+                    <span>Phone</span>
                     <input
                       type="tel"
                       value={contactPhone}
                       onChange={(event) => setContactPhone(event.target.value)}
-                      placeholder="+1 555 123 4567"
+                      placeholder="+91 98765 43210"
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
                     />
                   </motion.label>
@@ -651,7 +698,7 @@ ${answered.join("\n")}`;
                   <motion.label
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.22 }}
+                    transition={{ delay: 0.08, duration: 0.22 }}
                     className="space-y-1.5 text-sm text-slate-700"
                   >
                     <span>Role</span>
@@ -660,35 +707,191 @@ ${answered.join("\n")}`;
                       onChange={(event) => setContactRole(event.target.value)}
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
                     >
-                      <option>Hospital Administrator</option>
-                      <option>Healthcare Provider</option>
-                      <option>Clinical Researcher</option>
+                      <option>Patient</option>
+                      <option>Caregiver</option>
+                      <option>Doctor</option>
+                      <option>Lab Staff</option>
                       <option>Other</option>
                     </select>
                   </motion.label>
 
-                  <motion.label
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.22 }}
+                    className="grid gap-4 sm:grid-cols-3"
+                  >
+                    <label className="space-y-1.5 text-sm text-slate-700">
+                      <span>Age</span>
+                      <input
+                        value={patientAge}
+                        onChange={(event) => setPatientAge(event.target.value)}
+                        placeholder="45 years"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm text-slate-700">
+                      <span>Gender</span>
+                      <input
+                        value={patientGender}
+                        onChange={(event) => setPatientGender(event.target.value)}
+                        placeholder="Female"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm text-slate-700">
+                      <span>Blood Group</span>
+                      <input
+                        value={patientBloodGroup}
+                        onChange={(event) => setPatientBloodGroup(event.target.value.toUpperCase())}
+                        placeholder="O+"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
+                      />
+                    </label>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.22 }}
+                    className="grid gap-4 sm:grid-cols-2"
+                  >
+                    <label className="space-y-1.5 text-sm text-slate-700">
+                      <span>Report Title</span>
+                      <input
+                        value={reportTitle}
+                        onChange={(event) => setReportTitle(event.target.value)}
+                        placeholder="CBC Report - April 2026"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm text-slate-700">
+                      <span>Saved File Name</span>
+                      <input
+                        value={reportFileName}
+                        onChange={(event) => setReportFileName(event.target.value)}
+                        placeholder="patient-report.pdf"
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
+                      />
+                    </label>
+                  </motion.div>
+
+                  <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.14, duration: 0.22 }}
+                    className="space-y-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-white p-2">
+                          <UploadCloud className="h-5 w-5 text-secondary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">Upload PDF report</p>
+                          <p className="text-xs text-slate-500">We will extract the text and save the file path in submissions.</p>
+                        </div>
+                      </div>
+                      <label className="inline-flex cursor-pointer">
+                        <Button type="button" variant="outline">
+                          Choose PDF
+                        </Button>
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) {
+                              void handleExtractPdf(file);
+                            }
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {reportFilePath ? (
+                      <p className="text-xs text-slate-500">
+                        Uploaded file path: {reportFilePath}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap gap-3">
+                      <Button type="button" variant="ghost" onClick={handleInsertSampleLayout}>
+                        Insert Sample Layout
+                      </Button>
+                      <p className="text-xs leading-6 text-slate-500">
+                        The saved report text will always prepend `Age`, `Gender`, and `Blood Group` lines from the fields above.
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  <motion.label
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.16, duration: 0.22 }}
                     className="space-y-1.5 text-sm text-slate-700"
                   >
-                    <span>Message</span>
+                    <span>Report Text</span>
+                    <textarea
+                      rows={9}
+                      value={reportRawText}
+                      onChange={(event) => setReportRawText(event.target.value)}
+                      placeholder={PROFILE_SAMPLE_TEXT}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-secondary focus:outline-none"
+                    />
+                  </motion.label>
+
+                  <PatientProfileCard
+                    profile={detectedProfile}
+                    title="Live detected patient details"
+                    subtitle="This preview uses the exact saved text arrangement, including the automatic header lines."
+                  />
+
+                  <motion.label
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.18, duration: 0.22 }}
+                    className="space-y-1.5 text-sm text-slate-700"
+                  >
+                    <span>Doctor Notes / Submission Message</span>
                     <textarea
                       required
-                      rows={5}
+                      rows={4}
                       value={contactMessage}
                       onChange={(event) => setContactMessage(event.target.value)}
-                      placeholder="How can we help?"
+                      placeholder="Add symptoms, notes, or the reason for this submission."
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
                     />
                   </motion.label>
 
+                  {reportPdfLoading ? (
+                    <p className="inline-flex items-center gap-2 text-sm text-secondary">
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Extracting PDF text...
+                    </p>
+                  ) : null}
+                  {contactStatusMessage ? <p className="text-sm text-secondary">{contactStatusMessage}</p> : null}
                   {contactSubmitError ? <p className="text-sm text-red-600">{contactSubmitError}</p> : null}
 
-                  <Button type="submit" className="w-full" disabled={contactSubmitting}>
-                    {contactSubmitting ? "Sending..." : "Send Message"}
-                  </Button>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={contactSubmitting || reportPdfLoading}
+                      onClick={() => void handleSaveSubmission(false)}
+                    >
+                      {submitAction === "save" && contactSubmitting ? "Saving..." : "Save Submission"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={contactSubmitting || reportPdfLoading || !reportRawText.trim()}
+                      onClick={() => void handleSaveSubmission(true)}
+                    >
+                      {submitAction === "analyze" && contactSubmitting ? "Analyzing..." : "Save + Analyze"}
+                    </Button>
+                  </div>
                 </motion.form>
               )}
             </AnimatePresence>
@@ -951,4 +1154,28 @@ ${answered.join("\n")}`;
       </div>
     </div>
   );
+}
+
+function buildSubmissionReportText({
+  patientName,
+  age,
+  gender,
+  bloodGroup,
+  reportText,
+}: {
+  patientName: string;
+  age: string;
+  gender: string;
+  bloodGroup: string;
+  reportText: string;
+}): string {
+  const headerLines = [
+    patientName.trim() ? `Patient Name: ${patientName.trim()}` : "",
+    age.trim() ? `Age: ${age.trim()}` : "",
+    gender.trim() ? `Gender: ${gender.trim()}` : "",
+    bloodGroup.trim() ? `Blood Group: ${bloodGroup.trim().toUpperCase()}` : "",
+  ].filter(Boolean);
+
+  const body = reportText.trim();
+  return [...headerLines, body].filter(Boolean).join("\n");
 }

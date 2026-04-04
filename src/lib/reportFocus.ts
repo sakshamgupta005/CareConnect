@@ -25,6 +25,21 @@ type ThemeDefinition = Omit<ReportFocus, "bars" | "concernLabel" | "concernClass
   patterns: RegExp[];
 };
 
+export function isStructuredInsight(insight: ReportDetailsDto["insights"][number]): boolean {
+  const label = insight.label.trim().toLowerCase();
+  const value = insight.value.trim().toLowerCase();
+
+  if (label === "report observation") {
+    return false;
+  }
+
+  if (value === "mentioned in report") {
+    return false;
+  }
+
+  return /\d/.test(value);
+}
+
 const THEMES: ThemeDefinition[] = [
   {
     key: "diabetes",
@@ -169,10 +184,21 @@ export function deriveReportFocus(details: ReportDetailsDto | null): ReportFocus
     };
   }
 
+  const structuredInsights = details.insights.filter(isStructuredInsight);
+  if (structuredInsights.length === 0) {
+    const fallback = THEMES.find((theme) => theme.key === "general")!;
+    return {
+      ...fallback,
+      bars: buildFocusBars(null),
+      concernLabel: "Awaiting extracted values",
+      concernClassName: "border-slate-200 bg-slate-100 text-slate-700",
+    };
+  }
+
   const corpus = [
     details.report.rawText,
     details.report.aiSummary || "",
-    ...details.insights.map((item) => `${item.label} ${item.value} ${item.status}`),
+    ...structuredInsights.map((item) => `${item.label} ${item.value} ${item.status}`),
     ...details.faqs.map((item) => `${item.question} ${item.answer}`),
     ...details.recommendations.map((item) => item.text),
   ]
@@ -194,8 +220,8 @@ export function deriveReportFocus(details: ReportDetailsDto | null): ReportFocus
           .sort((left, right) => right.score - left.score)[0]!.theme
       : THEMES.find((theme) => theme.key === "general")!;
 
-  const highCount = details.insights.filter((item) => item.status === "high").length;
-  const lowCount = details.insights.filter((item) => item.status === "low").length;
+  const highCount = structuredInsights.filter((item) => item.status === "high").length;
+  const lowCount = structuredInsights.filter((item) => item.status === "low").length;
   const concern =
     highCount > 0
       ? {
@@ -221,11 +247,12 @@ export function deriveReportFocus(details: ReportDetailsDto | null): ReportFocus
 }
 
 function buildFocusBars(details: ReportDetailsDto | null): ReportFocusBar[] {
-  const insightCount = details?.insights.length ?? 0;
+  const structuredInsights = details?.insights.filter(isStructuredInsight) ?? [];
+  const insightCount = structuredInsights.length;
   const faqCount = details?.faqs.length ?? 0;
   const recommendationCount = details?.recommendations.length ?? 0;
   const attentionSignals =
-    details?.insights.filter((item) => item.status === "low" || item.status === "high").length ?? 0;
+    structuredInsights.filter((item) => item.status === "low" || item.status === "high").length;
 
   return [
     {

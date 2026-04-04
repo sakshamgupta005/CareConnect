@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, BookOpenCheck, FileText, LoaderCircle, MessageCircle, TrendingUp, UserRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, FileText, LoaderCircle, MessageCircle, TrendingUp, UserRound, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { FocusBars, PatientProfileCard } from "../../components/report-data";
+import { DoctorTeamSection } from "../../components/patient/DoctorTeamSection";
 import { Button } from "../../components/ui/Button";
 import { extractPatientProfile } from "../../lib/patientProfile";
 import { deriveReportFocus } from "../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
-const SITE_URL = "https://CareConnect.com";
+const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined)?.trim() || "https://CareConnect.com";
+const WHATSAPP_HELP_NUMBER = ((import.meta.env.VITE_WHATSAPP_HELP_NUMBER as string | undefined) || "")
+  .replace(/\D/g, "")
+  .trim();
 
 export default function PatientDashboard() {
   const location = useLocation();
@@ -132,15 +136,14 @@ export default function PatientDashboard() {
   const latestReportRoute = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
   const whatsappHelpMessage = useMemo(() => {
     const reportLink = latestReportId ? `${SITE_URL}/patient/reports/${latestReportId}` : `${SITE_URL}/patient`;
-    return `CareConnect Patient Support
-I need help understanding my health report.
-Open report guidance: ${reportLink}
-Questions I can ask:
-1. What does my report summary mean?
-2. Which findings are important for me?
-3. What should I discuss with my doctor next?`;
+    return `START
+Hi CareConnect, I need patient WhatsApp assistance.
+My report guidance link: ${reportLink}
+Please ask me simple intake questions and explain what CareConnect can do for me.`;
   }, [latestReportId]);
-  const whatsappHelpLink = `https://wa.me/?text=${encodeURIComponent(whatsappHelpMessage)}`;
+  const whatsappHelpLink = WHATSAPP_HELP_NUMBER
+    ? `https://wa.me/${WHATSAPP_HELP_NUMBER}?text=${encodeURIComponent(whatsappHelpMessage)}`
+    : `https://wa.me/?text=${encodeURIComponent(whatsappHelpMessage)}`;
   const reportFocus = deriveReportFocus(latestDetails);
   const selectedProfile = selectedProfileDetails
     ? extractPatientProfile({
@@ -157,6 +160,16 @@ Questions I can ask:
           <p className="text-sm text-slate-600">
             {reportFocus.patientDescription}
           </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              document.getElementById("patient-doctor-team")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          >
+            <Users className="h-4 w-4" />
+            Doctor Team
+          </Button>
         </motion.header>
 
         <motion.section
@@ -317,6 +330,8 @@ Questions I can ask:
           </motion.article>
         </section>
 
+        <DoctorTeamSection />
+
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -330,7 +345,7 @@ Questions I can ask:
               </p>
               <h2 className="mt-2 text-lg font-semibold text-slate-900">Use WhatsApp for easier support</h2>
               <p className="mt-1 text-sm text-slate-600">
-                If app navigation feels difficult, tap once to open WhatsApp with a ready patient-help message based on the latest analyzed report focus.
+                Tap once to start a guided WhatsApp chat. The assistant will ask a few simple patient details, answer basic CareConnect questions, and share the website link for your full report journey.
               </p>
             </div>
             <a href={whatsappHelpLink} target="_blank" rel="noreferrer">
@@ -343,6 +358,11 @@ Questions I can ask:
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message preview</p>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">{whatsappHelpMessage}</p>
+            {!WHATSAPP_HELP_NUMBER ? (
+              <p className="mt-3 text-xs text-amber-700">
+                Bot number is not configured. Add `VITE_WHATSAPP_HELP_NUMBER` in `.env` so this button opens your bot chat directly.
+              </p>
+            ) : null}
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
                 <TrendingUp className="h-3.5 w-3.5 text-sky-600" />

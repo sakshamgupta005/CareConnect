@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Upload, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, MessageSquare, ShieldCheck, Sparkles, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FocusBars } from "../components/report-data";
 import { Button } from "../components/ui/Button";
@@ -74,81 +74,126 @@ export default function LandingPage() {
   const reportFocus = deriveReportFocus(latestReportDetails);
 
   return (
-    <div className="bg-slate-50">
-      <section className="py-14 sm:py-20">
+    <div className="relative overflow-hidden bg-slate-50">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[26rem] bg-[radial-gradient(circle_at_top,rgba(2,132,199,0.18),transparent_58%)]" />
+
+      <section className="relative py-14 sm:py-20">
         <div className="mx-auto w-full max-w-6xl space-y-10 px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="space-y-5 text-center"
+            className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]"
           >
-            <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">CareConnect AI</h1>
-            <p className="mx-auto max-w-4xl text-base text-slate-600 sm:text-lg">
-              {reportFocus.siteDescription}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link to="/doctor">
-                <Button size="lg">
-                  Open Doctor Dashboard
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/patient">
-                <Button variant="outline" size="lg">
-                  Open Patient View
-                </Button>
-              </Link>
-            </div>
-            <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-              <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
-                {reportFocus.concernLabel}
+            <div className="space-y-5">
+              <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                <Sparkles className="h-3.5 w-3.5" />
+                Report-aware care communication
+              </p>
+              <h1 className="text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">
+                CareConnect AI
+              </h1>
+              <p className="max-w-2xl text-base text-slate-600 sm:text-lg">
+                {reportFocus.siteDescription}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link to="/doctor">
+                  <Button size="lg">
+                    Open Doctor Dashboard
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link to="/patient">
+                  <Button variant="outline" size="lg">
+                    Open Patient View
+                  </Button>
+                </Link>
               </div>
-              <h2 className="mt-3 text-xl font-semibold text-slate-900">{reportFocus.siteHeadline}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{reportFocus.label}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {reportFocus.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                  <span
+                    key={tag}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                  >
                     {tag}
                   </span>
                 ))}
               </div>
             </div>
+
+            <div className="card relative overflow-hidden p-6 sm:p-7">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-sky-100/70 blur-3xl" />
+              <div className="relative">
+                <div className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${reportFocus.concernClassName}`}>
+                  {reportFocus.concernLabel}
+                </div>
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">{reportFocus.siteHeadline}</h2>
+                <p className="mt-2 text-sm text-slate-600">{reportFocus.label}</p>
+                <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-700">
+                  {reportFocus.quickFacts.slice(0, 3).map((fact, index) => (
+                    <li key={`hero-focus-${index}`} className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
+                      <span>{fact}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  {dashboardStats.slice(0, 2).map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-slate-200 bg-white/80 p-3">
+                      <p className="text-lg font-bold text-primary">{stat.value}</p>
+                      <p className="text-[11px] text-slate-600">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            <WorkflowCard
-              icon={<Upload className="h-5 w-5 text-sky-700" />}
-              title="Doctor Uploads Report"
-              description="The doctor uploads a text-based report file from the dashboard."
-              delay={0}
-              to="/test-upload"
-              tone="sky"
-            />
-            <WorkflowCard
-              icon={<MessageSquare className="h-5 w-5 text-violet-700" />}
-              title="Doctor Adds FAQ Questions"
-              description="FAQs are generated and saved from analyzed report content."
-              delay={0.06}
-              to="/doctor/faqs"
-              tone="violet"
-            />
-            <WorkflowCard
-              icon={<FileText className="h-5 w-5 text-indigo-700" />}
-              title="Patient Gets Explanation"
-              description="The patient clicks a question and sees report-based explanation instantly."
-              delay={0.12}
-              to={patientReportLink}
-              tone="teal"
-            />
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Patient-ready workflow</p>
+                <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">Three steps from report to explanation</h2>
+              </div>
+            </div>
+            <div className="grid gap-5 md:grid-cols-3">
+              <WorkflowCard
+                step="01"
+                icon={<Upload className="h-5 w-5 text-sky-700" />}
+                title="Doctor Uploads Report"
+                description="Upload the latest report text or PDF into the dashboard."
+                delay={0}
+                to="/test-upload"
+                tone="sky"
+              />
+              <WorkflowCard
+                step="02"
+                icon={<MessageSquare className="h-5 w-5 text-violet-700" />}
+                title="System Generates FAQs"
+                description="Detected findings are converted into explainable question-answer content."
+                delay={0.06}
+                to="/doctor/faqs"
+                tone="violet"
+              />
+              <WorkflowCard
+                step="03"
+                icon={<FileText className="h-5 w-5 text-indigo-700" />}
+                title="Patient Reads Clearly"
+                description="Patients open focused explanations with report-aware language."
+                delay={0.12}
+                to={patientReportLink}
+                tone="teal"
+              />
+            </div>
           </div>
+
           {loadError ? (
-            <p className="text-center text-sm text-amber-700">{loadError}</p>
+            <p className="text-sm text-amber-700">{loadError}</p>
           ) : null}
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-white py-14">
+      <section className="border-y border-slate-200/80 bg-white/80 py-14 backdrop-blur">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-4 px-4 sm:px-6 md:grid-cols-4">
           {dashboardStats.map((stat, index) => (
             <motion.div
@@ -158,7 +203,7 @@ export default function LandingPage() {
               viewport={{ once: true, amount: 0.4 }}
               transition={{ delay: index * 0.06, duration: 0.35 }}
               whileHover={{ y: -2 }}
-              className="card p-4 text-center"
+              className="card p-4 text-left"
             >
               <p className="text-2xl font-bold text-primary">{stat.value}</p>
               <p className="mt-1 text-xs text-slate-600">{stat.label}</p>
@@ -168,36 +213,49 @@ export default function LandingPage() {
       </section>
 
       <section className="py-14">
-        <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_1fr]">
-          <motion.article
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            className="card p-6 sm:p-8"
-          >
-            <h2 className="text-xl font-semibold text-slate-900">Latest Report Focus</h2>
-            <p className="mt-2 text-sm text-slate-600">{reportFocus.siteHeadline}</p>
-            <ul className="mt-4 space-y-2 text-sm leading-relaxed text-slate-700">
-              {reportFocus.quickFacts.map((fact, index) => (
-                <li key={`home-focus-${index}`} className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
-                  <span>{fact}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.article>
+        <div className="mx-auto w-full max-w-6xl space-y-6 px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Live intelligence</p>
+              <h2 className="text-2xl font-semibold text-slate-900">Latest report focus</h2>
+            </div>
+            <Link to={sharedReportLink}>
+              <Button variant="outline" size="sm">
+                View Report Guidance
+              </Button>
+            </Link>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <motion.article
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.35 }}
+              className="card p-6 sm:p-8"
+            >
+              <h3 className="text-xl font-semibold text-slate-900">{reportFocus.label}</h3>
+              <p className="mt-2 text-sm text-slate-600">{reportFocus.siteHeadline}</p>
+              <ul className="mt-4 space-y-2 text-sm leading-relaxed text-slate-700">
+                {reportFocus.quickFacts.map((fact, index) => (
+                  <li key={`home-focus-${index}`} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary" />
+                    <span>{fact}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.article>
 
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-          >
-            <FocusBars
-              bars={reportFocus.bars}
-              title="Latest analysis graph"
-              subtitle="This graph is built from the most recently analyzed report only."
-            />
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.35 }}
+            >
+              <FocusBars
+                bars={reportFocus.bars}
+                title="Latest analysis graph"
+                subtitle="This graph is built from the most recently analyzed report only."
+              />
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -268,7 +326,9 @@ export default function LandingPage() {
                   : "Report guidance is now data-driven from uploaded medical documents."}
               </p>
               <Link to={sharedReportLink} className="mt-3 inline-flex">
-                <Button size="sm" variant="outline">View Report Guidance</Button>
+                <Button size="sm" variant="outline">
+                  View Report Guidance
+                </Button>
               </Link>
             </div>
           </motion.div>
@@ -315,15 +375,21 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.4 }}
-            className="rounded-2xl bg-primary p-6 text-white sm:p-8"
+            className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-primary via-slate-800 to-secondary p-6 text-white sm:p-8"
           >
-            <h2 className="text-2xl font-bold sm:text-3xl">Ready to start the FAQ recommendation flow?</h2>
-            <p className="mt-2 max-w-2xl text-slate-200">
-              Upload a report, analyze it, and share clear explanation guidance with patients.
-            </p>
-            <Link to={doctorReportLink} className="mt-5 inline-block">
-              <Button variant="secondary" size="lg">Go to Doctor Dashboard</Button>
-            </Link>
+            <div className="pointer-events-none absolute -top-20 right-8 h-56 w-56 rounded-full bg-white/12 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 left-12 h-56 w-56 rounded-full bg-sky-300/25 blur-3xl" />
+            <div className="relative">
+              <h2 className="text-2xl font-bold sm:text-3xl">Ready to start the FAQ recommendation flow?</h2>
+              <p className="mt-2 max-w-2xl text-slate-200">
+                Upload a report, analyze it, and share clear explanation guidance with patients.
+              </p>
+              <Link to={doctorReportLink} className="mt-5 inline-block">
+                <Button variant="secondary" size="lg">
+                  Go to Doctor Dashboard
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -332,6 +398,7 @@ export default function LandingPage() {
 }
 
 function WorkflowCard({
+  step,
   icon,
   title,
   description,
@@ -339,6 +406,7 @@ function WorkflowCard({
   to,
   tone,
 }: {
+  step: string;
   icon: ReactNode;
   title: string;
   description: string;
@@ -360,17 +428,21 @@ function WorkflowCard({
       viewport={{ once: true, amount: 0.3 }}
       transition={{ delay, duration: 0.32 }}
       whileHover={{ y: -2 }}
-      className={cn("card p-5", toneClassName)}
+      className={cn("card p-5 sm:p-6", toneClassName)}
     >
       <Link
         to={to}
-        className="flex h-full flex-col rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30"
+        className="group flex h-full flex-col rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30"
       >
+        <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-600">
+          {step}
+        </div>
         <div className="inline-flex rounded-lg bg-white/70 p-2">{icon}</div>
         <h3 className="mt-3 text-base font-semibold text-slate-900">{title}</h3>
         <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">{description}</p>
-        <span className="mt-3 inline-flex items-center rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-xs font-semibold text-secondary">
+        <span className="mt-3 inline-flex items-center gap-1 rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-xs font-semibold text-secondary">
           Show workflow
+          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </span>
       </Link>
     </motion.article>
@@ -402,7 +474,7 @@ function FeatureRow({
       <Link
         to={to}
         className={cn(
-          "flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-secondary/30",
+          "group flex items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-secondary/30",
           toneClassName,
         )}
       >
@@ -412,8 +484,9 @@ function FeatureRow({
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">{description}</p>
-          <span className="mt-2 inline-flex items-center rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-[11px] font-semibold text-secondary">
+          <span className="mt-2 inline-flex items-center gap-1 rounded-md border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-[11px] font-semibold text-secondary">
             Show details
+            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
           </span>
         </div>
       </Link>

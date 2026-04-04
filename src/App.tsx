@@ -22,6 +22,7 @@ import DoctorDataPage from "./app/doctor/data/page";
 import SubmissionsPage from "./app/submissions/page";
 import ReportResultsPage from "./app/reports/report-results-page";
 import TestUploadPage from "./app/test-upload/page";
+import DoctorPublicProfilePage from "./app/care-team/doctor-public-page";
 import {
   clearAuthSession,
   loadAuthSession,
@@ -116,8 +117,13 @@ function AppContent() {
       return false;
     }
 
+    const username = input.username.trim();
+    if (!username) {
+      return false;
+    }
+
     const nextSession: AuthSession = {
-      username: input.username,
+      username,
       role: input.role,
       loggedInAt: Date.now(),
     };
@@ -184,6 +190,7 @@ function AppContent() {
               <Route path="/patient/reports/:reportId" element={<PatientReportDetailsPage />} />
               <Route path="/reports/:reportId" element={<ReportResultsPage />} />
               <Route path="/test-upload" element={<TestUploadPage />} />
+              <Route path="/care-team/doctor/:doctorPublicId" element={<DoctorPublicProfilePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/patient-assistant" element={<PatientAssistantPage />} />

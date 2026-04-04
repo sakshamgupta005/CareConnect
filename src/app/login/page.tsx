@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from "react";
 import { motion } from "motion/react";
-import { LockKeyhole, Stethoscope, UserRound } from "lucide-react";
+import { Stethoscope, UserRound } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { type UserRole } from "../../lib/auth";
+import { isValidPhoneIdentifier, normalizePhoneIdentifier, type UserRole } from "../../lib/auth";
 
 type LoginPageProps = {
   onLogin: (input: { username: string; password: string; role: UserRole }) => boolean;
@@ -18,19 +18,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     event.preventDefault();
 
     const cleanUsername = username.trim();
-    if (!cleanUsername || !password.trim()) {
-      setError("Username and password are required.");
+    const cleanPassword = normalizePhoneIdentifier(password);
+
+    if (!cleanUsername || !cleanPassword) {
+      setError("User ID and password are required.");
+      return;
+    }
+
+    if (!isValidPhoneIdentifier(cleanPassword)) {
+      setError("Password must be a valid phone number.");
       return;
     }
 
     const success = onLogin({
       username: cleanUsername,
-      password,
+      password: cleanPassword,
       role,
     });
 
     if (!success) {
-      setError("Invalid password. Please try again.");
+      setError("Keep any User ID, but password must be your phone number.");
       return;
     }
 
@@ -96,12 +103,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1.5 text-sm text-slate-700">
-                <span>Username</span>
+                <span>User ID</span>
                 <input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="Enter any name or ID"
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
                 />
               </label>
@@ -111,17 +118,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   type="password"
-                  placeholder="Enter password"
+                  placeholder="Enter phone number"
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-secondary focus:outline-none"
                 />
+                <p className="text-xs text-slate-500">Password should be your phone number.</p>
               </label>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-              <p className="inline-flex items-center gap-1 font-medium text-slate-700">
-                <LockKeyhole className="h-3.5 w-3.5 text-secondary" />
-                Demo password: <span className="font-semibold text-slate-900">careconnect123</span>
-              </p>
             </div>
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}

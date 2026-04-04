@@ -1,17 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Plus, Share2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { FocusBars } from "../../../components/report-data";
 import { Button } from "../../../components/ui/Button";
+import { normalizeDoctorPublicIdInput } from "../../../lib/doctorTeam";
 import { deriveReportFocus } from "../../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../../lib/reportApi";
 
 export default function CollaborationWorkspace() {
+  const [searchParams] = useSearchParams();
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
   const [latestDetails, setLatestDetails] = useState<ReportDetailsDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const selectedDoctorPublicId = useMemo(
+    () => normalizeDoctorPublicIdInput(searchParams.get("doctorPublicId") ?? ""),
+    [searchParams],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +93,12 @@ export default function CollaborationWorkspace() {
             </Link>
           </div>
         </motion.header>
+        {selectedDoctorPublicId ? (
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Active doctor channel</p>
+            <p className="mt-1 text-sm font-semibold text-secondary">{selectedDoctorPublicId}</p>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-4">

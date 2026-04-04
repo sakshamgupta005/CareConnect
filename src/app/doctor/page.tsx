@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, ClipboardList, Database, FileSearch, FileUp, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, ClipboardList, Database, FileSearch, FileUp, Hash, Mail, Sparkles } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { FocusBars } from "../../components/report-data";
 import { Button } from "../../components/ui/Button";
-import { deriveReportFocus } from "../../lib/reportFocus";
+import { loadAuthSession } from "../../lib/auth";
+import { listContactSubmissions, type ContactSubmissionRecord } from "../../lib/contactApi";
+import { buildDoctorPublicIdFromUsername } from "../../lib/doctorTeam";
+import { deriveReportFocus, isStructuredInsight } from "../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
 type FocusSection = "upload" | "faq" | null;
@@ -12,6 +15,7 @@ type FocusSection = "upload" | "faq" | null;
 export default function DoctorDashboard() {
   const location = useLocation();
   const [reports, setReports] = useState<ReportListItemDto[]>([]);
+  const [submissions, setSubmissions] = useState<ContactSubmissionRecord[]>([]);
   const [previewDetails, setPreviewDetails] = useState<ReportDetailsDto | null>(null);
   const [focusSection, setFocusSection] = useState<FocusSection>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,11 +28,29 @@ export default function DoctorDashboard() {
       setIsLoading(true);
       setError("");
       try {
-        const loadedReports = await listReports();
+        const [loadedReports, loadedSubmissions] = await Promise.all([listReports(), listContactSubmissions()]);
         if (cancelled) return;
-        setReports(loadedReports);
+        const sortedReports = [...loadedReports].sort((left, right) => {
+          const leftTime = Date.parse(left.createdAt);
+          const rightTime = Date.parse(right.createdAt);
 
-        const previewId = loadedReports.find((report) => report.status === "analyzed")?.id ?? loadedReports[0]?.id;
+          if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) {
+            return 0;
+          }
+          if (Number.isNaN(leftTime)) {
+            return 1;
+          }
+          if (Number.isNaN(rightTime)) {
+            return -1;
+          }
+
+          return rightTime - leftTime;
+        });
+
+        setReports(sortedReports);
+        setSubmissions(loadedSubmissions);
+
+        const previewId = sortedReports[0]?.id;
         if (previewId) {
           const details = await getReportById(previewId);
           if (cancelled) return;
@@ -89,20 +111,20 @@ export default function DoctorDashboard() {
     const insights = reports.reduce((sum, report) => sum + report.counts.insights, 0);
     const faqs = reports.reduce((sum, report) => sum + report.counts.faqs, 0);
     const recommendations = reports.reduce((sum, report) => sum + report.counts.recommendations, 0);
-    return { analyzed, insights, faqs, recommendations };
-  }, [reports]);
+    return { analyzed, insights, faqs, recommendations, submissions: submissions.length };
+  }, [reports, submissions]);
 
   const insightMix = useMemo(() => {
-    const source = previewDetails?.insights ?? [];
+    const source = (previewDetails?.insights ?? []).filter(isStructuredInsight);
     const low = source.filter((insight) => insight.status === "low").length;
     const normal = source.filter((insight) => insight.status === "normal").length;
     const high = source.filter((insight) => insight.status === "high").length;
-    const total = source.length || 1;
+    const total = source.length;
 
     return [
-      { label: "Low", count: low, percent: Math.round((low / total) * 100), color: "bg-red-500" },
-      { label: "Normal", count: normal, percent: Math.round((normal / total) * 100), color: "bg-emerald-500" },
-      { label: "High", count: high, percent: Math.round((high / total) * 100), color: "bg-orange-500" },
+      { label: "Low", count: low, percent: total > 0 ? Math.round((low / total) * 100) : 0, color: "bg-red-500" },
+      { label: "Normal", count: normal, percent: total > 0 ? Math.round((normal / total) * 100) : 0, color: "bg-emerald-500" },
+      { label: "High", count: high, percent: total > 0 ? Math.round((high / total) * 100) : 0, color: "bg-orange-500" },
     ];
   }, [previewDetails]);
 
@@ -110,6 +132,7 @@ export default function DoctorDashboard() {
   const latestDoctorRoute = latestReportId ? `/doctor/reports/${latestReportId}` : "/test-upload";
   const latestPatientRoute = latestReportId ? `/patient/reports/${latestReportId}` : "/patient";
   const reportFocus = deriveReportFocus(previewDetails);
+  const doctorPublicId = useMemo(() => buildDoctorPublicIdFromUsername(loadAuthSession()?.username ?? ""), []);
 
   return (
     <div className="bg-slate-50 py-10 sm:py-14">
@@ -134,9 +157,14 @@ export default function DoctorDashboard() {
             <Link to="/doctor/submissions" className="inline-flex">
               <Button size="sm" variant="outline">
                 <Mail className="h-4 w-4" />
-                View Contact Submissions
+                Patient Profiles
               </Button>
             </Link>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <Hash className="h-3.5 w-3.5 text-secondary" />
+            Public Doctor ID:
+            <span className="font-semibold text-slate-900">{doctorPublicId || "Not available"}</span>
           </div>
         </motion.header>
 
@@ -220,23 +248,31 @@ export default function DoctorDashboard() {
               {reportFocus.siteHeadline}
             </p>
             <div className="mt-5 space-y-3">
-              {previewDetails && previewDetails.insights.length > 0 ? (
-                insightMix.map((entry) => (
-                  <div key={entry.label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>{entry.label}</span>
-                      <span>
-                        {entry.count} ({entry.percent}%)
-                      </span>
-                    </div>
-                    <div className="insight-track">
-                      <div className={`insight-fill ${entry.color}`} style={{ width: `${Math.max(6, entry.percent)}%` }} />
-                    </div>
+              {insightMix.map((entry) => (
+                <div key={entry.label} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <span>{entry.label}</span>
+                    <span>
+                      {entry.count} ({entry.percent}%)
+                    </span>
                   </div>
-                ))
+                  <div className="insight-track">
+                    <div
+                      className={`insight-fill ${entry.color}`}
+                      style={{ width: entry.percent > 0 ? `${Math.max(6, entry.percent)}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {isLoading ? (
+                <p className="text-sm text-slate-500">Loading insight mix...</p>
+              ) : insightMix.every((entry) => entry.count === 0) ? (
+                <p className="text-sm text-slate-500">
+                  Awaiting extracted lab values from the latest uploaded report.
+                </p>
               ) : (
                 <p className="text-sm text-slate-500">
-                  {isLoading ? "Loading insight mix..." : "No analyzed insights available yet."}
+                  Mix is based on extracted values from the latest analyzed upload.
                 </p>
               )}
             </div>
@@ -259,6 +295,7 @@ export default function DoctorDashboard() {
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <MetricBox label="Reports" value={`${reports.length}`} />
+                <MetricBox label="Submissions" value={`${totals.submissions}`} />
                 <MetricBox label="Analyzed" value={`${totals.analyzed}`} />
                 <MetricBox label="Insights" value={`${totals.insights}`} />
                 <MetricBox label="FAQs" value={`${totals.faqs}`} />
@@ -345,6 +382,63 @@ export default function DoctorDashboard() {
             </div>
           </motion.article>
         </section>
+
+        <section className="card p-6 sm:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Latest Patient Profiles</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                New contact-page report submissions appear here with profile fields and linked report access.
+              </p>
+            </div>
+            <Link to="/doctor/submissions">
+              <Button size="sm" variant="outline">Open Profile Directory</Button>
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {submissions.length > 0 ? (
+              submissions.slice(0, 3).map((submission) => (
+                <div key={submission.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{submission.name}</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatSubmissionDate(submission.createdAt)}</p>
+                    </div>
+                    <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {submission.linkedReportStatus || "saved"}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-600">
+                    {[
+                      submission.age ? `Age ${submission.age}` : "",
+                      submission.gender ? submission.gender : "",
+                      submission.bloodGroup ? `Blood ${submission.bloodGroup}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" | ") || "Profile fields not provided"}
+                  </p>
+                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-700">
+                    {submission.message}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link to="/doctor/submissions" className="inline-flex">
+                      <Button size="sm" variant="outline">View Submission</Button>
+                    </Link>
+                    {submission.linkedReportId ? (
+                      <Link to={`/doctor/reports/${submission.linkedReportId}`} className="inline-flex">
+                        <Button size="sm">Open Report</Button>
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">
+                {isLoading ? "Loading submissions..." : "No patient submissions have been saved yet."}
+              </p>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -357,4 +451,19 @@ function MetricBox({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
+}
+
+function formatSubmissionDate(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
