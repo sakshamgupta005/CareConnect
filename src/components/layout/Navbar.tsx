@@ -1,105 +1,87 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Activity, ChevronRight } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { Activity, Menu, X } from "lucide-react";
 import { Button } from "../ui/Button";
+import { cn } from "../../lib/utils";
 import { navLinks } from "../../data/mock";
 
 export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const closeMenu = () => setIsOpen(false);
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 h-20 flex items-center justify-between",
-        isScrolled ? "bg-white/80 backdrop-blur-xl shadow-sm h-16" : "bg-transparent"
-      )}
-    >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
-            <Activity className="text-white w-6 h-6" />
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <Activity className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-black font-headline tracking-tighter text-primary">
-            CareConnect AI
-          </span>
+          <span className="text-lg font-bold text-primary">CareConnect AI</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden items-center gap-6 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               to={link.href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-secondary",
-                location.pathname === link.href ? "text-secondary" : "text-slate-500"
+                "text-sm font-medium transition-colors hover:text-primary",
+                location.pathname === link.href ? "text-primary" : "text-slate-600",
               )}
             >
               {link.name}
             </Link>
           ))}
-          <div className="h-4 w-px bg-slate-200" />
-          <Link to="/doctor" className="text-sm font-medium text-slate-500 hover:text-primary">
+          <Link to="/doctor" className="text-sm font-medium text-slate-600 hover:text-primary">
             Doctor Portal
           </Link>
-          <Button size="sm" onClick={() => (window.location.href = "/contact")}>
-            Request Demo
-          </Button>
+          <Link to="/contact">
+            <Button size="sm">Request Demo</Button>
+          </Link>
         </nav>
 
         <button
-          className="md:hidden p-2 text-primary"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="inline-flex items-center justify-center rounded-lg p-2 text-slate-700 hover:bg-slate-100 md:hidden"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-label="Toggle navigation"
         >
-          {isMobileMenuOpen ? <X /> : <Menu />}
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 right-0 bg-white border-t border-slate-100 p-6 shadow-xl md:hidden"
-          >
-            <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  className="text-lg font-semibold text-slate-900 flex items-center justify-between"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.name}
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
-                </Link>
-              ))}
-              <hr className="border-slate-100" />
+      {isOpen && (
+        <div className="border-t border-slate-200 bg-white md:hidden">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6">
+            {navLinks.map((link) => (
               <Link
-                to="/doctor"
-                className="text-lg font-semibold text-slate-900"
-                onClick={() => setIsMobileMenuOpen(false)}
+                key={link.name}
+                to={link.href}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  location.pathname === link.href
+                    ? "bg-slate-100 text-primary"
+                    : "text-slate-700 hover:bg-slate-100",
+                )}
+                onClick={closeMenu}
               >
-                Doctor Portal
+                {link.name}
               </Link>
-              <Button className="w-full" onClick={() => (window.location.href = "/contact")}>
-                Request Demo
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ))}
+            <Link
+              to="/doctor"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              onClick={closeMenu}
+            >
+              Doctor Portal
+            </Link>
+            <Link to="/contact" onClick={closeMenu} className="pt-2">
+              <Button className="w-full">Request Demo</Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
-

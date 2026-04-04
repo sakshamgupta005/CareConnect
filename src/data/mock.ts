@@ -7,69 +7,79 @@ export const navLinks = [
 export const faqs = [
   {
     question: "Is CareConnect AI clinically validated?",
-    answer: "Yes, our models are trained on curated clinical datasets and reviewed by a board of medical professionals to ensure accuracy and empathy in every interaction."
+    answer:
+      "Yes. The platform is designed with clinical review workflows and safety-focused content policies.",
   },
   {
-    question: "How do you handle patient privacy?",
-    answer: "We utilize end-to-end encryption and are fully HIPAA, GDPR, and SOC-2 compliant. Data is never used for training external models."
+    question: "How is patient privacy handled?",
+    answer:
+      "Data is protected using modern encryption and secure access controls aligned with healthcare best practices.",
   },
   {
-    question: "Can it integrate with our existing EHR?",
-    answer: "Absolutely. We provide robust FHIR-based APIs and out-of-the-box connectors for Epic, Cerner, and other major platforms."
-  }
+    question: "Can we connect it with existing hospital systems?",
+    answer:
+      "Yes. CareConnect supports integration-first workflows and can be connected to existing tools in phases.",
+  },
 ];
 
 export const stats = [
-  { label: "Faster Triage", value: "90%", icon: "Zap" },
-  { label: "Security", value: "HIPAA", icon: "ShieldCheck" },
-  { label: "Admin Savings", value: "Drastic", icon: "PiggyBank" },
-  { label: "Patient Trust", value: "Enhanced", icon: "Users" }
+  { label: "Faster Patient Understanding", value: "90%" },
+  { label: "Clinical Security Focus", value: "HIPAA" },
+  { label: "Admin Work Reduced", value: "40%" },
+  { label: "Supported Hospitals", value: "50+" },
 ];
 
 export const patientRecords = [
-  { 
-    id: "1", 
-    name: "Eleanor Rigby", 
-    priority: "High", 
-    time: "12 mins ago", 
-    insight: "AI detected anomalous heart rate variability. Patient requested follow-up on medication side effects.",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop"
+  {
+    id: "1",
+    name: "Eleanor Rigby",
+    priority: "High",
+    time: "12 mins ago",
+    insight:
+      "AI detected a possible medication side-effect concern and suggested follow-up.",
+    avatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
   },
-  { 
-    id: "2", 
-    name: "Marcus Chen", 
-    priority: "Stable", 
-    time: "2 hrs ago", 
-    insight: "AI answered routine questions about post-op diet. No intervention required.",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop"
-  }
+  {
+    id: "2",
+    name: "Marcus Chen",
+    priority: "Stable",
+    time: "2 hrs ago",
+    insight:
+      "Routine post-op guidance delivered. No urgent intervention was needed.",
+    avatar:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
+  },
 ];
 
 export const researchProjects = [
   {
     id: "alpha",
     title: "Neurosurgery: Project Alpha",
-    update: "AI synthesized 42 papers on neuroplasticity.",
+    update: "AI summarized 42 papers on neuroplasticity.",
     updatedAt: "4h ago",
-    members: ["JV", "AI", "+2"]
+    members: ["JV", "AI", "+2"],
   },
   {
     id: "cardiac",
     title: "Cardiac Care Pathways",
-    update: "Protocol refinement in progress with Dr. Miller.",
+    update: "Protocol update in progress with cardiology team.",
     updatedAt: "Yesterday",
-    members: ["JV", "AM"]
-  }
+    members: ["JV", "AM"],
+  },
 ];
 
 export const chatResponses = {
   english: {
-    normal: "The myocardial infarction mentioned in your report means a part of your heart muscle isn't getting enough blood.",
-    simple: "Think of your heart like a house with water pipes. A 'myocardial infarction' is like a temporary blockage in one of those pipes that needs fixing."
+    normal:
+      "Your report suggests part of the heart muscle may not be getting enough blood flow.",
+    simple:
+      "Think of it like a pipe blockage in the heart's blood supply that needs treatment.",
   },
   hindi: {
-    normal: "आपकी रिपोर्ट में बताए गए मायोकार्डियल इंफार्क्शन का मतलब है कि आपके दिल की मांसपेशियों के एक हिस्से को पर्याप्त रक्त नहीं मिल रहा है।",
-    simple: "अपने दिल को पानी के पाइप वाले घर की तरह समझें। 'मायोकार्डियल इंफार्क्शन' उन पाइपों में से एक में अस्थायी रुकावट की तरह है जिसे ठीक करने की आवश्यकता है।"
-  }
+    normal:
+      "Aapki report me dil ki manspeshi tak khoon ka flow kam hone ka sanket hai.",
+    simple:
+      "Isse aise samjhein jaise dil ki ek blood pipe me rukavat ho jise theek karna hai.",
+  },
 };
-

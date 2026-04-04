@@ -1,82 +1,56 @@
 import { Link } from "react-router-dom";
-import { Activity, Mail, Phone, MapPin } from "lucide-react";
+import { Activity, Mail, MapPin, Phone } from "lucide-react";
 
 export function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="bg-slate-50 border-t border-slate-200/50 pt-24 pb-12 px-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 mb-24">
-        <div className="md:col-span-4 space-y-6">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
-              <Activity className="text-white w-6 h-6" />
+    <footer className="border-t border-slate-200 bg-white">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3">
+        <div className="space-y-3">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+              <Activity className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-black font-headline tracking-tighter text-primary">
-              CareConnect AI
-            </span>
+            <span className="text-lg font-bold text-primary">CareConnect AI</span>
           </Link>
-          <p className="text-slate-500 leading-relaxed max-w-xs">
-            Bridging the gap between medical knowledge and human understanding through intelligent, context-aware AI.
+          <p className="text-sm text-slate-600">
+            A simple platform to help patients understand care and help doctors collaborate.
           </p>
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer">
-              <Mail className="w-5 h-5 text-slate-400" />
-            </div>
-            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer">
-              <Phone className="w-5 h-5 text-slate-400" />
-            </div>
-            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer">
-              <MapPin className="w-5 h-5 text-slate-400" />
-            </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-slate-900">Quick Links</h4>
+          <div className="grid grid-cols-2 gap-2 text-sm text-slate-600">
+            <Link to="/product" className="hover:text-primary">Product</Link>
+            <Link to="/about" className="hover:text-primary">About</Link>
+            <Link to="/contact" className="hover:text-primary">Contact</Link>
+            <Link to="/doctor" className="hover:text-primary">Doctor Portal</Link>
           </div>
         </div>
 
-        <div className="md:col-span-2 space-y-6">
-          <h4 className="font-bold text-slate-900">Product</h4>
-          <ul className="space-y-4 text-slate-500 text-sm">
-            <li><Link to="/product" className="hover:text-secondary transition-colors">Features</Link></li>
-            <li><Link to="/product" className="hover:text-secondary transition-colors">Patient AI</Link></li>
-            <li><Link to="/product" className="hover:text-secondary transition-colors">Doctor Collab</Link></li>
-            <li><Link to="/contact" className="hover:text-secondary transition-colors">Pricing</Link></li>
-          </ul>
-        </div>
-
-        <div className="md:col-span-2 space-y-6">
-          <h4 className="font-bold text-slate-900">Company</h4>
-          <ul className="space-y-4 text-slate-500 text-sm">
-            <li><Link to="/about" className="hover:text-secondary transition-colors">About Us</Link></li>
-            <li><Link to="/about" className="hover:text-secondary transition-colors">Mission</Link></li>
-            <li><Link to="/about" className="hover:text-secondary transition-colors">Careers</Link></li>
-            <li><Link to="/contact" className="hover:text-secondary transition-colors">Contact</Link></li>
-          </ul>
-        </div>
-
-        <div className="md:col-span-4 space-y-6">
-          <h4 className="font-bold text-slate-900">Medical Disclaimer</h4>
-          <p className="text-slate-400 text-xs leading-loose uppercase tracking-tighter">
-            CareConnect AI provides clinical support and information for educational purposes only. Always consult with a qualified healthcare professional for medical advice, diagnosis, or treatment.
-          </p>
-          <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Compliance</p>
-            <div className="flex gap-4 items-center opacity-60">
-              <span className="text-[10px] font-bold">HIPAA</span>
-              <span className="text-[10px] font-bold">GDPR</span>
-              <span className="text-[10px] font-bold">SOC-2</span>
-            </div>
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-slate-900">Contact</h4>
+          <div className="space-y-2 text-sm text-slate-600">
+            <p className="flex items-center gap-2">
+              <Mail className="h-4 w-4" /> hello@careconnect.ai
+            </p>
+            <p className="flex items-center gap-2">
+              <Phone className="h-4 w-4" /> +1 (555) 123-4567
+            </p>
+            <p className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> San Francisco, CA
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 border-t border-slate-200/50 pt-12">
-        <p className="text-xs text-slate-400 font-medium uppercase tracking-widest">
-          Â© 2024 CareConnect AI. Clinical Decision Support System.
-        </p>
-        <div className="flex gap-8 text-xs text-slate-400 font-medium uppercase tracking-widest">
-          <Link to="#" className="hover:text-secondary transition-colors">Privacy Policy</Link>
-          <Link to="#" className="hover:text-secondary transition-colors">Terms of Service</Link>
-          <Link to="#" className="hover:text-secondary transition-colors">Disclaimer</Link>
+      <div className="border-t border-slate-200">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-2 px-4 py-4 text-xs text-slate-500 sm:px-6 md:flex-row md:items-center">
+          <p>© {year} CareConnect AI. Clinical decision support platform.</p>
+          <p>For educational use only. Always consult a qualified medical professional.</p>
         </div>
       </div>
     </footer>
   );
 }
-

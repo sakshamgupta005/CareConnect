@@ -1,175 +1,156 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { MessageSquare, Send, Languages, Sparkles, User, Activity, Clock, FileText, ChevronRight, Mic } from "lucide-react";
+import { useState } from "react";
+import { Languages, MessageSquare, Send, Sparkles, User } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { cn } from "../../lib/utils";
 import { chatResponses } from "../../data/mock";
+import { cn } from "../../lib/utils";
+
+type Language = "english" | "hindi";
+type ChatMessage = { role: "ai" | "user"; text: string };
 
 export default function PatientDashboard() {
-  const [language, setLanguage] = useState<"english" | "hindi">("english");
-  const [isSimpleMode, setIsSimpleMode] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: "ai", text: "Hello Eleanor! I've reviewed your latest report. Is there anything you'd like me to explain?" }
-  ]);
+  const [language, setLanguage] = useState<Language>("english");
+  const [simpleMode, setSimpleMode] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "ai",
+      text: "Hello Eleanor. I reviewed your latest report. What would you like me to explain?",
+    },
+  ]);
 
   const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    
-    const newMessages = [...messages, { role: "user", text: inputValue }];
-    setMessages(newMessages);
+    const text = inputValue.trim();
+    if (!text) return;
+
+    const next = [...messages, { role: "user", text } as ChatMessage];
+    setMessages(next);
     setInputValue("");
 
-    // Fake AI response
-    setTimeout(() => {
-      const response = isSimpleMode 
-        ? chatResponses[language].simple 
-        : chatResponses[language].normal;
-      setMessages([...newMessages, { role: "ai", text: response }]);
-    }, 1000);
+    const response = simpleMode ? chatResponses[language].simple : chatResponses[language].normal;
+
+    window.setTimeout(() => {
+      setMessages([...next, { role: "ai", text: response }]);
+    }, 400);
   };
 
   return (
-    <div className="pt-24 min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-      {/* Sidebar - Patient Info */}
-      <aside className="w-full lg:w-80 bg-white border-r border-slate-200/50 p-8 space-y-12 shrink-0">
-        <div className="text-center">
-          <div className="w-24 h-24 rounded-3xl overflow-hidden mx-auto mb-6 shadow-xl border-4 border-white">
-            <img 
-              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" 
-              alt="Eleanor Rigby" 
-              className="w-full h-full object-cover"
-            />
+    <div className="bg-slate-50 py-8 sm:py-10">
+      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[280px_1fr]">
+        <aside className="card p-5">
+          <h1 className="text-lg font-semibold text-slate-900">Patient Profile</h1>
+          <div className="mt-4 space-y-2 text-sm text-slate-600">
+            <p><span className="font-medium text-slate-900">Name:</span> Eleanor Rigby</p>
+            <p><span className="font-medium text-slate-900">Patient ID:</span> ER-9021</p>
+            <p><span className="font-medium text-slate-900">Care Plan:</span> Cardiac Recovery</p>
           </div>
-          <h2 className="text-2xl font-headline font-bold text-primary">Eleanor Rigby</h2>
-          <p className="text-sm text-slate-400 font-medium uppercase tracking-widest mt-1">Patient ID: #ER-9021</p>
-        </div>
 
-        <div className="space-y-6">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Care Plan</h3>
-          <div className="space-y-3">
-            <CarePlanItem icon={<Activity />} label="Cardiac Recovery" status="On Track" />
-            <CarePlanItem icon={<Clock />} label="Medication" status="8:00 AM" />
-            <CarePlanItem icon={<FileText />} label="Lab Results" status="New" highlight />
+          <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+            <p className="font-semibold text-slate-900">Tip</p>
+            <p className="mt-1">Keep daily messages short and clear so important instructions are easy to follow.</p>
           </div>
-        </div>
+        </aside>
 
-        <div className="p-6 bg-secondary/5 rounded-2xl border border-secondary/10">
-          <div className="flex items-center gap-3 mb-3">
-            <Sparkles className="text-secondary w-5 h-5" />
-            <span className="font-bold text-sm text-primary">AI Health Tip</span>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Your heart rate variability is improving. Keep up the light walking!
-          </p>
-        </div>
-      </aside>
-
-      {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col h-[calc(100vh-6rem)]">
-        <header className="p-6 bg-white border-b border-slate-200/50 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
-              <MessageSquare className="text-secondary w-6 h-6" />
+        <main className="card flex min-h-[500px] flex-col">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-secondary/10 p-2">
+                <MessageSquare className="h-5 w-5 text-secondary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">CareConnect AI Assistant</h2>
+                <p className="text-xs text-slate-500">Always available</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-slate-900">CareConnect AI Assistant</h3>
-              <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest">Always Online</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex bg-slate-100 p-1 rounded-xl">
-              <button 
-                onClick={() => setLanguage("english")}
-                className={cn("px-3 py-1.5 text-xs font-bold rounded-lg transition-all", language === "english" ? "bg-white shadow-sm text-primary" : "text-slate-400")}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white p-1">
+                <Languages className="ml-1 h-4 w-4 text-slate-500" />
+                <button
+                  onClick={() => setLanguage("english")}
+                  className={cn(
+                    "rounded px-2 py-1 text-xs",
+                    language === "english" ? "bg-slate-100 text-slate-900" : "text-slate-600",
+                  )}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => setLanguage("hindi")}
+                  className={cn(
+                    "rounded px-2 py-1 text-xs",
+                    language === "hindi" ? "bg-slate-100 text-slate-900" : "text-slate-600",
+                  )}
+                >
+                  Hindi
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSimpleMode((prev) => !prev)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs",
+                  simpleMode
+                    ? "border-secondary/40 bg-secondary/10 text-secondary"
+                    : "border-slate-300 text-slate-600",
+                )}
               >
-                EN
+                <Sparkles className="h-3.5 w-3.5" />
+                Simple mode
               </button>
-              <button 
-                onClick={() => setLanguage("hindi")}
-                className={cn("px-3 py-1.5 text-xs font-bold rounded-lg transition-all", language === "hindi" ? "bg-white shadow-sm text-primary" : "text-slate-400")}
-              >
-                हिन्दी
-              </button>
             </div>
-            <button 
-              onClick={() => setIsSimpleMode(!isSimpleMode)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border",
-                isSimpleMode ? "bg-secondary/10 border-secondary/20 text-secondary" : "bg-white border-slate-200 text-slate-500"
-              )}
-            >
-              <Sparkles className="w-4 h-4" />
-              Simple Mode
-            </button>
-          </div>
-        </header>
+          </header>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
-          <AnimatePresence initial={false}>
-            {messages.map((msg, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn("flex gap-4 max-w-2xl", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={cn("flex max-w-3xl gap-2", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}
               >
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", msg.role === "ai" ? "bg-secondary/10 text-secondary" : "bg-primary text-white")}>
-                  {msg.role === "ai" ? <Sparkles className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                <div className={cn("mt-1 rounded-full p-2", msg.role === "ai" ? "bg-secondary/10" : "bg-primary/10")}>
+                  {msg.role === "ai" ? (
+                    <Sparkles className="h-4 w-4 text-secondary" />
+                  ) : (
+                    <User className="h-4 w-4 text-primary" />
+                  )}
                 </div>
-                <div className={cn(
-                  "p-5 rounded-2xl text-sm leading-relaxed",
-                  msg.role === "ai" ? "bg-white border border-slate-100 shadow-sm text-slate-700" : "bg-primary text-white"
-                )}>
+                <div
+                  className={cn(
+                    "rounded-xl px-3 py-2 text-sm",
+                    msg.role === "ai"
+                      ? "border border-slate-200 bg-white text-slate-700"
+                      : "bg-primary text-white",
+                  )}
+                >
                   {msg.text}
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
-        </div>
+          </div>
 
-        <footer className="p-6 bg-white border-t border-slate-200/50">
-          <div className="max-w-4xl mx-auto relative">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              placeholder="Ask me anything about your care..."
-              className="w-full pl-6 pr-32 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-secondary/20 transition-all"
-            />
-            <div className="absolute right-2 top-2 flex gap-2">
-              <Button variant="ghost" size="sm" className="p-2">
-                <Mic className="w-5 h-5 text-slate-400" />
-              </Button>
-              <Button size="sm" onClick={handleSendMessage}>
-                <Send className="w-5 h-5" />
+          <footer className="border-t border-slate-200 p-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Ask about your care plan..."
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-secondary focus:outline-none"
+              />
+              <Button onClick={handleSendMessage} aria-label="Send message">
+                <Send className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-          <p className="text-[10px] text-center text-slate-400 mt-4 uppercase tracking-widest font-bold">
-            AI Assistant is not a replacement for professional medical advice.
-          </p>
-        </footer>
-      </main>
-    </div>
-  );
-}
-
-function CarePlanItem({ icon, label, status, highlight = false }: { icon: React.ReactNode; label: string; status: string; highlight?: boolean }) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group">
-      <div className="flex items-center gap-3">
-        <div className="text-slate-400 group-hover:text-secondary transition-colors">
-          {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
-        </div>
-        <span className="text-sm font-semibold text-slate-700">{label}</span>
+            <p className="mt-2 text-xs text-slate-500">
+              This assistant provides educational guidance and does not replace professional medical advice.
+            </p>
+          </footer>
+        </main>
       </div>
-      <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md", highlight ? "bg-secondary text-white" : "bg-slate-100 text-slate-400")}>
-        {status}
-      </span>
     </div>
   );
 }
-

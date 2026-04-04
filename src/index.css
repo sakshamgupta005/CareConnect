@@ -1,43 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-headline: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-primary: #0F172A;
-  --color-primary-container: #131b2e;
+  --color-primary: #0f172a;
   --color-secondary: #006a61;
-  --color-secondary-container: #86f2e4;
-  --color-surface: #f7f9fb;
-  --color-surface-container-low: #f2f4f6;
-  --color-surface-container-lowest: #ffffff;
-  --color-on-surface-variant: #45464d;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
+  --color-surface: #f8fafc;
 }
 
 @layer base {
   body {
-    @apply bg-surface text-primary font-sans antialiased;
+    @apply m-0 bg-surface text-primary font-sans antialiased;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-headline tracking-tight;
+  }
+
+  a {
+    @apply text-inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply text-sm;
   }
 }
 
 @layer components {
-  .glass-panel {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20;
-  }
-  
-  .ai-insight-card {
-    @apply border-l-4 border-secondary bg-white/90 backdrop-blur-md shadow-sm;
-  }
-  
-  .clinical-shadow {
-    @apply shadow-[0_32px_64px_-12px_rgba(15,23,42,0.04)];
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white;
   }
 }
