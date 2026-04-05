@@ -59,6 +59,8 @@ export type UploadReportPayload = {
   fileType: string;
   filePath?: string;
   rawText: string;
+  patientId?: string;
+  phone?: string;
 };
 
 export async function uploadReport(payload: UploadReportPayload): Promise<ReportDto> {

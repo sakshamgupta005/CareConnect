@@ -2,7 +2,7 @@ import "dotenv/config";
 import makeWASocket, { Browsers, DisconnectReason, useMultiFileAuthState } from "baileys";
 import qrcode from "qrcode-terminal";
 
-const SITE_URL = (process.env.CARECONNECT_SITE_URL || "https://CareConnect.com").trim();
+const SITE_URL = (process.env.CARECONNECT_SITE_URL || "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app").trim();
 const AUTH_FOLDER = (process.env.WHATSAPP_AUTH_FOLDER || ".data/baileys-auth").trim();
 
 const START_KEYWORDS = ["start", "hi", "hello", "help", "menu", "open whatsapp help"];

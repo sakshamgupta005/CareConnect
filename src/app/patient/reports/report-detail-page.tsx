@@ -7,7 +7,7 @@ import { Button } from "../../../components/ui/Button";
 import { deriveReportFocus } from "../../../lib/reportFocus";
 import { getReportById, type ReportDetailsDto } from "../../../lib/reportApi";
 
-const SITE_URL = "https://CareConnect.com";
+const SITE_URL = "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app";
 
 export default function PatientReportDetailsPage() {
   const { reportId = "" } = useParams();

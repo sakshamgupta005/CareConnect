@@ -9,7 +9,9 @@ import { extractPatientProfile } from "../../lib/patientProfile";
 import { deriveReportFocus } from "../../lib/reportFocus";
 import { getReportById, listReports, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
-const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined)?.trim() || "https://CareConnect.com";
+const SITE_URL =
+  (import.meta.env.VITE_SITE_URL as string | undefined)?.trim() ||
+  "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app";
 const WHATSAPP_HELP_NUMBER = ((import.meta.env.VITE_WHATSAPP_HELP_NUMBER as string | undefined) || "")
   .replace(/\D/g, "")
   .trim();

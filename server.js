@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import aiRoutes from "./routes/aiRoutes.js";
+import doctorTeamRoutes from "./routes/doctorTeamRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 
 const app = express();
@@ -20,11 +21,13 @@ app.get("/health", (_req, res) => {
 // Main API routes.
 app.use("/ai", aiRoutes);
 app.use("/reports", reportRoutes);
+app.use("/", doctorTeamRoutes);
 
 // Backward-compatible aliases for existing frontend calls.
 // These support URLs like /api/ask and /api/upload-report.
 app.use("/api", aiRoutes);
 app.use("/api", reportRoutes);
+app.use("/api", doctorTeamRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/reports", reportRoutes);
 

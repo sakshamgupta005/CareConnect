@@ -9,7 +9,7 @@ import { uploadPdfToServer } from "../../lib/pdfUploadApi";
 import { deriveReportFocus } from "../../lib/reportFocus";
 import { analyzeReport, getReportById, listReports, uploadReport, type ReportDetailsDto, type ReportListItemDto } from "../../lib/reportApi";
 
-const SITE_URL = "https://CareConnect.com";
+const SITE_URL = "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app";
 const QR_IMAGE_URL =
   "https://res.cloudinary.com/dyxlavy0j/image/upload/v1775298105/WhatsApp_Image_2026-04-04_at_3.49.17_PM_ss4a3g.jpg";
 const LOGIN_STORAGE_KEY = "careconnect_logged_in";
@@ -241,6 +241,8 @@ export default function ContactPage() {
           fileType: normalizedFileType,
           filePath: reportFilePath.trim() || undefined,
           rawText: compiledReportText,
+          patientId: contactEmail.trim() ? `contact:${contactEmail.trim().toLowerCase()}` : undefined,
+          phone: contactPhone.trim() || undefined,
         });
 
         linkedReportId = savedReport.id;
@@ -278,19 +280,6 @@ export default function ContactPage() {
       setSavedReportId(linkedReportId);
       setSavedReportStatus(linkedReportStatus ?? "");
       setSubmitted(true);
-      setContactName("");
-      setContactEmail("");
-      setContactPhone("");
-      setContactRole("Patient");
-      setPatientAge("");
-      setPatientGender("");
-      setPatientBloodGroup("");
-      setReportTitle("Patient Lab Report");
-      setReportFileName("patient-report.txt");
-      setReportFileType("text/plain");
-      setReportFilePath("");
-      setReportRawText("");
-      setContactMessage("");
     } catch (error) {
       setContactSubmitError(error instanceof Error ? error.message : "Could not save submission.");
     } finally {
@@ -628,6 +617,19 @@ ${answered.join("\n")}`;
                       setContactSubmissionId("");
                       setSavedReportId("");
                       setSavedReportStatus("");
+                      setContactName("");
+                      setContactEmail("");
+                      setContactPhone("");
+                      setContactRole("Patient");
+                      setPatientAge("");
+                      setPatientGender("");
+                      setPatientBloodGroup("");
+                      setReportTitle("Patient Lab Report");
+                      setReportFileName("patient-report.txt");
+                      setReportFileType("text/plain");
+                      setReportFilePath("");
+                      setReportRawText("");
+                      setContactMessage("");
                     }}
                   >
                     Create another submission
@@ -640,6 +642,12 @@ ${answered.join("\n")}`;
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.3 }}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!contactSubmitting && !reportPdfLoading) {
+                      void handleSaveSubmission(false);
+                    }
+                  }}
                   className="space-y-5"
                 >
                   <div className="space-y-2">
