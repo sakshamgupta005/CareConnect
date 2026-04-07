@@ -12,9 +12,7 @@ import { getReportById, listReports, type ReportDetailsDto, type ReportListItemD
 const SITE_URL =
   (import.meta.env.VITE_SITE_URL as string | undefined)?.trim() ||
   "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app";
-const WHATSAPP_HELP_NUMBER = ((import.meta.env.VITE_WHATSAPP_HELP_NUMBER as string | undefined) || "")
-  .replace(/\D/g, "")
-  .trim();
+const WHATSAPP_HELP_NUMBER = "7986547697";
 
 export default function PatientDashboard() {
   const location = useLocation();
@@ -139,13 +137,11 @@ export default function PatientDashboard() {
   const whatsappHelpMessage = useMemo(() => {
     const reportLink = latestReportId ? `${SITE_URL}/patient/reports/${latestReportId}` : `${SITE_URL}/patient`;
     return `START
-Hi CareConnect, I need patient WhatsApp assistance.
-My report guidance link: ${reportLink}
-Please ask me simple intake questions and explain what CareConnect can do for me.`;
+Hi CareConnect team, I have a doubt and need help understanding my report.
+Here is my report link: ${reportLink}
+Please guide me in simple words and tell me what I should ask my doctor next.`;
   }, [latestReportId]);
-  const whatsappHelpLink = WHATSAPP_HELP_NUMBER
-    ? `https://wa.me/${WHATSAPP_HELP_NUMBER}?text=${encodeURIComponent(whatsappHelpMessage)}`
-    : `https://wa.me/?text=${encodeURIComponent(whatsappHelpMessage)}`;
+  const whatsappHelpLink = `https://wa.me/${WHATSAPP_HELP_NUMBER}?text=${encodeURIComponent(whatsappHelpMessage)}`;
   const reportFocus = deriveReportFocus(latestDetails);
   const selectedProfile = selectedProfileDetails
     ? extractPatientProfile({
@@ -360,11 +356,6 @@ Please ask me simple intake questions and explain what CareConnect can do for me
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message preview</p>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">{whatsappHelpMessage}</p>
-            {!WHATSAPP_HELP_NUMBER ? (
-              <p className="mt-3 text-xs text-amber-700">
-                Bot number is not configured. Add `VITE_WHATSAPP_HELP_NUMBER` in `.env` so this button opens your bot chat directly.
-              </p>
-            ) : null}
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
                 <TrendingUp className="h-3.5 w-3.5 text-sky-600" />

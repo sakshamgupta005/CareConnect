@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { db } from "../config/firebase.js";
+import { randomUUID } from "crypto";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 
 const doctorTeamRoutes = Router();
-const COLLECTION_NAME = "doctor_team_members";
+const STORE_FILE_PATH = path.join(process.cwd(), ".data", "doctor-team-store.json");
 
 function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -22,9 +24,9 @@ function normalizeDoctorPublicId(value) {
 }
 
 function mapMemberDocToDto(doc) {
-  const data = doc.data() || {};
+  const data = doc || {};
   return {
-    id: doc.id,
+    id: cleanText(data.id),
     patientPublicId: cleanText(data.patientPublicId),
     doctorPublicId: cleanText(data.doctorPublicId),
     doctorName: cleanText(data.doctorName) || null,
@@ -35,6 +37,25 @@ function mapMemberDocToDto(doc) {
   };
 }
 
+async function readStore() {
+  try {
+    const raw = await readFile(STORE_FILE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    const members = Array.isArray(parsed?.members) ? parsed.members : [];
+    return { members };
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return { members: [] };
+    }
+    throw error;
+  }
+}
+
+async function writeStore(store) {
+  await mkdir(path.dirname(STORE_FILE_PATH), { recursive: true });
+  await writeFile(STORE_FILE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+}
+
 doctorTeamRoutes.get("/doctor-team/public/:doctorPublicId", async (req, res) => {
   try {
     const normalizedDoctorPublicId = normalizeDoctorPublicId(req.params.doctorPublicId || "");
@@ -42,12 +63,10 @@ doctorTeamRoutes.get("/doctor-team/public/:doctorPublicId", async (req, res) => 
       return res.status(400).json({ error: "Missing doctor public id." });
     }
 
-    const snapshot = await db
-      .collection(COLLECTION_NAME)
-      .where("doctorPublicId", "==", normalizedDoctorPublicId)
-      .get();
-
-    const members = snapshot.docs.map(mapMemberDocToDto);
+    const store = await readStore();
+    const members = store.members
+      .map(mapMemberDocToDto)
+      .filter((item) => item.doctorPublicId === normalizedDoctorPublicId);
     const uniquePatientIds = [...new Set(members.map((item) => item.patientPublicId).filter(Boolean))];
 
     let doctorName = null;
@@ -83,13 +102,10 @@ doctorTeamRoutes.get("/doctor-team", async (req, res) => {
       return res.status(400).json({ error: "Missing patient public id." });
     }
 
-    const snapshot = await db
-      .collection(COLLECTION_NAME)
-      .where("patientPublicId", "==", normalizedPatientPublicId)
-      .get();
-
-    const members = snapshot.docs
+    const store = await readStore();
+    const members = store.members
       .map(mapMemberDocToDto)
+      .filter((item) => item.patientPublicId === normalizedPatientPublicId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     return res.status(200).json(members);
@@ -117,26 +133,29 @@ doctorTeamRoutes.post("/doctor-team", async (req, res) => {
     }
 
     const nowIso = new Date().toISOString();
-    const existingSnapshot = await db
-      .collection(COLLECTION_NAME)
-      .where("patientPublicId", "==", normalizedPatientPublicId)
-      .where("doctorPublicId", "==", normalizedDoctorPublicId)
-      .limit(1)
-      .get();
+    const store = await readStore();
+    const existingIndex = store.members.findIndex(
+      (member) =>
+        cleanText(member.patientPublicId) === normalizedPatientPublicId &&
+        cleanText(member.doctorPublicId) === normalizedDoctorPublicId,
+    );
 
-    if (!existingSnapshot.empty) {
-      const existingRef = existingSnapshot.docs[0].ref;
-      await existingRef.update({
+    if (existingIndex >= 0) {
+      const existing = mapMemberDocToDto(store.members[existingIndex]);
+      const updated = {
+        ...existing,
         doctorName: doctorName || null,
         doctorSpecialty: doctorSpecialty || null,
         notes: notes || null,
         updatedAt: nowIso,
-      });
-      const updatedDoc = await existingRef.get();
-      return res.status(200).json(mapMemberDocToDto(updatedDoc));
+      };
+      store.members[existingIndex] = updated;
+      await writeStore(store);
+      return res.status(200).json(updated);
     }
 
-    const createdRef = await db.collection(COLLECTION_NAME).add({
+    const created = {
+      id: randomUUID(),
       patientPublicId: normalizedPatientPublicId,
       doctorPublicId: normalizedDoctorPublicId,
       doctorName: doctorName || null,
@@ -144,10 +163,11 @@ doctorTeamRoutes.post("/doctor-team", async (req, res) => {
       notes: notes || null,
       createdAt: nowIso,
       updatedAt: nowIso,
-    });
-    const createdDoc = await createdRef.get();
+    };
+    store.members.push(created);
+    await writeStore(store);
 
-    return res.status(201).json(mapMemberDocToDto(createdDoc));
+    return res.status(201).json(created);
   } catch (error) {
     console.error("[POST /doctor-team] Failed:", error);
     const message = error instanceof Error ? error.message : "Could not add doctor to team.";
@@ -166,18 +186,19 @@ doctorTeamRoutes.delete("/doctor-team", async (req, res) => {
       return res.status(400).json({ error: "Missing doctor team member id." });
     }
 
-    const ref = db.collection(COLLECTION_NAME).doc(memberId);
-    const doc = await ref.get();
-    if (!doc.exists) {
+    const store = await readStore();
+    const targetIndex = store.members.findIndex((member) => cleanText(member.id) === memberId);
+    if (targetIndex < 0) {
       return res.status(404).json({ error: "Doctor team member not found." });
     }
 
-    const member = mapMemberDocToDto(doc);
+    const member = mapMemberDocToDto(store.members[targetIndex]);
     if (member.patientPublicId !== normalizedPatientPublicId) {
       return res.status(403).json({ error: "This member does not belong to the provided patient public id." });
     }
 
-    await ref.delete();
+    store.members.splice(targetIndex, 1);
+    await writeStore(store);
     return res.status(200).json({ deleted: true });
   } catch (error) {
     console.error("[DELETE /doctor-team] Failed:", error);

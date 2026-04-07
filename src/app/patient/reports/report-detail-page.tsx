@@ -8,6 +8,7 @@ import { deriveReportFocus } from "../../../lib/reportFocus";
 import { getReportById, type ReportDetailsDto } from "../../../lib/reportApi";
 
 const SITE_URL = "https://skill-deploy-21fwgx1iwt-codex-agent-deploys.vercel.app";
+const WHATSAPP_HELP_NUMBER = "7986547697";
 
 export default function PatientReportDetailsPage() {
   const { reportId = "" } = useParams();
@@ -67,10 +68,10 @@ export default function PatientReportDetailsPage() {
       .map((fact) => `- ${fact}`)
       .join("\n");
 
-    return `CareConnect Report Help
+    return `Hi CareConnect team, I have a doubt about this report.
 Report: ${details.report.title}
 Current focus: ${reportFocus.label}
-What this report is showing:
+This is what the report is showing:
 ${keyNotes || "- Report analysis is still being reviewed."}
 Report link: ${SITE_URL}/patient/reports/${details.report.id}
 
@@ -78,7 +79,7 @@ Please help me with:
 ${questionBlock}`;
   }, [details, reportFocus]);
 
-  const whatsappReportLink = `https://wa.me/?text=${encodeURIComponent(whatsappReportMessage)}`;
+  const whatsappReportLink = `https://wa.me/${WHATSAPP_HELP_NUMBER}?text=${encodeURIComponent(whatsappReportMessage)}`;
 
   if (isLoading) {
     return (
